@@ -21,6 +21,34 @@ body {
 }
 #menubar span { cursor: pointer; color: #556; padding: 2px 6px; border-radius: 3px; }
 #menubar span:hover { background: #c5d5e0; }
+.menu-item { position: relative; }
+.menu-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #fff;
+  border: 1px solid #c5d5e0;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  z-index: 200;
+  min-width: 190px;
+  margin-top: 2px;
+}
+.menu-item:hover .menu-dropdown { display: block; }
+.menu-dropdown-item {
+  padding: 6px 14px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  white-space: nowrap;
+  color: #334;
+}
+.menu-dropdown-item:hover:not(.disabled) { background: #e8f0f7; }
+.menu-dropdown-item.disabled { opacity: 0.38; cursor: default; }
+.menu-shortcut { color: #aab; font-size: 11px; }
 
 #toolbar {
   background: #e8f0f7;
@@ -102,6 +130,7 @@ body {
 .badge-question { background: #7eb8d8; }
 .badge-answer { background: #e8a870; }
 .badge-unknown { background: #aaa; }
+.thumbnail-badge[style*="cursor"]:hover { opacity: 0.75; }
 .thumbnail-page-num {
   position: absolute;
   bottom: 2px;

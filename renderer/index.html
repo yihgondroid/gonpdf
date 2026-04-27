@@ -9,7 +9,15 @@
 </head>
 <body>
   <div id="menubar">
-    <span>파일</span><span>편집</span><span>보기</span><span>도구</span>
+    <span>파일</span>
+    <div class="menu-item">
+      <span>편집</span>
+      <div class="menu-dropdown">
+        <div class="menu-dropdown-item disabled" id="menu-undo">실행 취소 <span class="menu-shortcut">Ctrl+Z</span></div>
+        <div class="menu-dropdown-item disabled" id="menu-redo">다시 실행 <span class="menu-shortcut">Ctrl+Y</span></div>
+      </div>
+    </div>
+    <span>보기</span><span>도구</span>
   </div>
 
   <div id="toolbar">
@@ -20,14 +28,8 @@
     <div class="toolbar-sep"></div>
     <div class="toolbar-group">
       <button id="btn-delete" disabled>🗑️ 삭제</button>
-      <button id="btn-crop" disabled>✂️ 크롭</button>
       <button id="btn-merge">🔗 합치기</button>
       <button id="btn-split" disabled>✂️ 나누기</button>
-    </div>
-    <div class="toolbar-sep"></div>
-    <div class="toolbar-group">
-      <button id="btn-ocr" disabled>🔍 OCR</button>
-      <button id="btn-classify" disabled>🤖 자동 분류</button>
     </div>
     <div class="toolbar-sep"></div>
     <div class="toolbar-group automation">
@@ -63,13 +65,6 @@
     <span id="status-info"></span>
   </div>
 
-  <div id="crop-overlay" class="hidden">
-    <div id="crop-info">마우스로 영역을 드래그하세요</div>
-    <div id="crop-selection"></div>
-    <button id="btn-crop-confirm">크롭 적용</button>
-    <button id="btn-crop-cancel">취소</button>
-  </div>
-
   <script src="../node_modules/pdfjs-dist/build/pdf.js"></script>
   <script src="../node_modules/pdf-lib/dist/pdf-lib.min.js"></script>
   <script src="../node_modules/sortablejs/Sortable.min.js"></script>
@@ -78,9 +73,6 @@
   <script src="js/thumbnail.js"></script>
   <script src="js/viewer.js"></script>
   <script src="js/editor.js"></script>
-  <script src="js/crop.js"></script>
-  <script src="js/ocr.js"></script>
-  <script src="js/classifier.js"></script>
   <script src="js/automation.js"></script>
   <script src="js/app.js"></script>
 </body>
