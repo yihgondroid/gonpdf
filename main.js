@@ -31,8 +31,9 @@ ipcMain.handle('dialog:openFile', async () => {
     properties: ['openFile'],
   });
   if (canceled || filePaths.length === 0) return null;
-  const buffer = fs.readFileSync(filePaths[0]);
-  return { buffer: buffer.buffer, name: path.basename(filePaths[0]) };
+  const fileData = fs.readFileSync(filePaths[0]);
+  const arrayBuffer = fileData.buffer.slice(fileData.byteOffset, fileData.byteOffset + fileData.byteLength);
+  return { buffer: arrayBuffer, name: path.basename(filePaths[0]) };
 });
 
 ipcMain.handle('dialog:saveFile', async (_, { buffer, defaultName }) => {

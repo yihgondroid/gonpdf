@@ -1,5 +1,5 @@
 ﻿// thumbnail.js
-const THUMB_WIDTH = 100;
+const THUMB_WIDTH = 160;
 
 function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder) {
   if (!labels) labels = {};
@@ -43,11 +43,14 @@ function createThumbnailItem(pageIndex, pdfJsDoc, label, onSelect) {
 
 async function renderThumbCanvas(pdfJsDoc, pageIndex, canvas) {
   const page = await pdfJsDoc.getPage(pageIndex + 1);
+  const dpr = window.devicePixelRatio || 1;
   const viewport = page.getViewport({ scale: 1 });
-  const scale = THUMB_WIDTH / viewport.width;
+  const scale = (THUMB_WIDTH / viewport.width) * dpr;
   const scaledViewport = page.getViewport({ scale: scale });
   canvas.width = scaledViewport.width;
   canvas.height = scaledViewport.height;
+  canvas.style.width = '100%';
+  canvas.style.aspectRatio = scaledViewport.width + ' / ' + scaledViewport.height;
   await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
 }
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; worker-src blob:;" />
+    content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; worker-src blob: file:;" />
   <title>PDF 편집 툴</title>
   <link rel="stylesheet" href="css/main.css" />
 </head>
@@ -43,6 +43,7 @@
       <div id="thumbnail-count"></div>
       <div id="thumbnail-list"></div>
     </div>
+    <div id="panel-resizer"></div>
     <div id="viewer-panel">
       <div id="viewer-canvas-wrap">
         <canvas id="viewer-canvas"></canvas>
@@ -52,7 +53,7 @@
         <span id="viewer-page-info">— / —</span>
         <button id="btn-next">▶</button>
         <span id="viewer-zoom-info">🔍 100%</span>
-        <input type="range" id="zoom-slider" min="50" max="200" value="100" step="10" />
+        <input type="range" id="zoom-slider" min="50" max="400" value="100" step="10" />
       </div>
     </div>
   </div>
@@ -69,7 +70,7 @@
     <button id="btn-crop-cancel">취소</button>
   </div>
 
-  <script src="../node_modules/pdfjs-dist/build/pdf.mjs"></script>
+  <script src="../node_modules/pdfjs-dist/build/pdf.js"></script>
   <script src="../node_modules/pdf-lib/dist/pdf-lib.min.js"></script>
   <script src="../node_modules/sortablejs/Sortable.min.js"></script>
   <script src="../node_modules/tesseract.js/dist/tesseract.min.js"></script>

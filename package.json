@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^4.4.168",
+    "pdfjs-dist": "^3.11.174",
     "sortablejs": "^1.15.2",
     "tesseract.js": "^5.1.0"
   },

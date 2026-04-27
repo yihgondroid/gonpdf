@@ -77,6 +77,34 @@ $('btn-next').addEventListener('click', function() {
     selectPage(state.currentPage + 1);
 });
 
+// 뷰어 스크롤: Ctrl+휠=확대/축소, 일반 휠=페이지 이동
+$('viewer-canvas-wrap').addEventListener('wheel', async function(e) {
+  if (!state.pdfJsDoc) return;
+  if (e.ctrlKey) {
+    e.preventDefault();
+    const slider = $('zoom-slider');
+    const step = e.deltaY < 0 ? 10 : -10;
+    const newVal = Math.max(50, Math.min(400, Number(slider.value) + step));
+    slider.value = newVal;
+    state.scale = newVal / 100;
+    Viewer.updateZoomInfo($('viewer-zoom-info'), state.scale);
+    await Viewer.renderPage(state.pdfJsDoc, state.currentPage, $('viewer-canvas'), state.scale);
+    return;
+  }
+  const wrap = $('viewer-canvas-wrap');
+  const atTop = wrap.scrollTop === 0;
+  const atBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 1;
+  if (e.deltaY < 0 && atTop && state.currentPage > 0) {
+    e.preventDefault();
+    selectPage(state.currentPage - 1);
+    wrap.scrollTop = wrap.scrollHeight;
+  } else if (e.deltaY > 0 && atBottom && state.currentPage < state.pdfJsDoc.numPages - 1) {
+    e.preventDefault();
+    selectPage(state.currentPage + 1);
+    wrap.scrollTop = 0;
+  }
+}, { passive: false });
+
 $('zoom-slider').addEventListener('input', async function(e) {
   state.scale = Viewer.scaleFromSlider(Number(e.target.value));
   Viewer.updateZoomInfo($('viewer-zoom-info'), state.scale);
@@ -164,6 +192,64 @@ $('btn-auto-answer').addEventListener('click', async function() {
   await saveDoc(doc, '해설.pdf');
   $('status-info').textContent = '해설.pdf 저장 완료';
 });
+
+// 뷰어 드래그 패닝
+(function() {
+  const wrap = $('viewer-canvas-wrap');
+  let isDragging = false, startX, startY, scrollLeft, scrollTop;
+
+  wrap.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    scrollLeft = wrap.scrollLeft;
+    scrollTop = wrap.scrollTop;
+    wrap.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    wrap.scrollLeft = scrollLeft - (e.clientX - startX);
+    wrap.scrollTop = scrollTop - (e.clientY - startY);
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!isDragging) return;
+    isDragging = false;
+    wrap.style.cursor = 'grab';
+  });
+
+  wrap.style.cursor = 'grab';
+})();
+
+// 썸네일 패널 리사이저
+(function() {
+  const resizer = $('panel-resizer');
+  const panel = $('thumbnail-panel');
+  let startX, startWidth;
+
+  resizer.addEventListener('mousedown', function(e) {
+    startX = e.clientX;
+    startWidth = panel.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!resizer.classList.contains('dragging')) return;
+    const newWidth = Math.max(80, Math.min(400, startWidth + e.clientX - startX));
+    panel.style.width = newWidth + 'px';
+  });
+
+  document.addEventListener('mouseup', function() {
+    resizer.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+})();
 
 $('btn-auto-all').addEventListener('click', async function() {
   $('status-info').textContent = '전체 분리 처리 중...';

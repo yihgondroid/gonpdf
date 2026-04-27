@@ -2,6 +2,8 @@ appId: com.pdfeditor.app
 productName: PDF 편집 툴
 copyright: Copyright © 2026
 
+asar: false
+
 directories:
   output: dist
 
