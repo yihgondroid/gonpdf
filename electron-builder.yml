@@ -1,15 +1,33 @@
 appId: com.pdfeditor.app
 productName: PDF 편집 툴
+copyright: Copyright © 2026
+
 directories:
   output: dist
+
 win:
-  target: nsis
-  icon: renderer/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+  signingHashAlgorithms: []
+  sign: null
+
 nsis:
   oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
 files:
   - main.js
   - preload.js
   - renderer/**
+  - "!renderer/js/**/*.test.js"
   - node_modules/**
+  - "!node_modules/.cache/**"
+
+extraResources:
+  - from: node_modules/tesseract.js/
+    to: tesseract/
+    filter: ["**/*"]
