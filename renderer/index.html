@@ -1,0 +1,86 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; worker-src blob:;" />
+  <title>PDF 편집 툴</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <div id="menubar">
+    <span>파일</span><span>편집</span><span>보기</span><span>도구</span>
+  </div>
+
+  <div id="toolbar">
+    <div class="toolbar-group">
+      <button id="btn-open">📂 열기</button>
+      <button id="btn-save">💾 저장</button>
+    </div>
+    <div class="toolbar-sep"></div>
+    <div class="toolbar-group">
+      <button id="btn-delete" disabled>🗑️ 삭제</button>
+      <button id="btn-crop" disabled>✂️ 크롭</button>
+      <button id="btn-merge">🔗 합치기</button>
+      <button id="btn-split" disabled>✂️ 나누기</button>
+    </div>
+    <div class="toolbar-sep"></div>
+    <div class="toolbar-group">
+      <button id="btn-ocr" disabled>🔍 OCR</button>
+      <button id="btn-classify" disabled>🤖 자동 분류</button>
+    </div>
+    <div class="toolbar-sep"></div>
+    <div class="toolbar-group automation">
+      <button id="btn-auto-left" disabled>📘 문제 좌</button>
+      <button id="btn-auto-right" disabled>📗 문제 우</button>
+      <button id="btn-auto-answer" disabled>📙 해설만</button>
+      <button id="btn-auto-all" disabled>📦 전체분리</button>
+    </div>
+  </div>
+
+  <div id="main-area">
+    <div id="thumbnail-panel">
+      <div id="thumbnail-count"></div>
+      <div id="thumbnail-list"></div>
+    </div>
+    <div id="viewer-panel">
+      <div id="viewer-canvas-wrap">
+        <canvas id="viewer-canvas"></canvas>
+      </div>
+      <div id="viewer-controls">
+        <button id="btn-prev">◀</button>
+        <span id="viewer-page-info">— / —</span>
+        <button id="btn-next">▶</button>
+        <span id="viewer-zoom-info">🔍 100%</span>
+        <input type="range" id="zoom-slider" min="50" max="200" value="100" step="10" />
+      </div>
+    </div>
+  </div>
+
+  <div id="statusbar">
+    <span id="status-filename">파일을 열어주세요</span>
+    <span id="status-info"></span>
+  </div>
+
+  <div id="crop-overlay" class="hidden">
+    <div id="crop-info">마우스로 영역을 드래그하세요</div>
+    <div id="crop-selection"></div>
+    <button id="btn-crop-confirm">크롭 적용</button>
+    <button id="btn-crop-cancel">취소</button>
+  </div>
+
+  <script src="../node_modules/pdfjs-dist/build/pdf.mjs"></script>
+  <script src="../node_modules/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="../node_modules/sortablejs/Sortable.min.js"></script>
+  <script src="../node_modules/tesseract.js/dist/tesseract.min.js"></script>
+  <script src="js/pdf-loader.js"></script>
+  <script src="js/thumbnail.js"></script>
+  <script src="js/viewer.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/crop.js"></script>
+  <script src="js/ocr.js"></script>
+  <script src="js/classifier.js"></script>
+  <script src="js/automation.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
