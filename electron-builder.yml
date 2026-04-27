@@ -1,0 +1,15 @@
+appId: com.pdfeditor.app
+productName: PDF 편집 툴
+directories:
+  output: dist
+win:
+  target: nsis
+  icon: renderer/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+files:
+  - main.js
+  - preload.js
+  - renderer/**
+  - node_modules/**
