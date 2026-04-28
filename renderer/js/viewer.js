@@ -1,29 +1,35 @@
-﻿// viewer.js
-let _currentScale = 1.0;
+// viewer.js
+window.Viewer = (function() {
 
-async function renderPage(pdfJsDoc, pageIndex, canvas, scale) {
-  if (scale !== undefined) _currentScale = scale;
-  const page = await pdfJsDoc.getPage(pageIndex + 1);
-  const dpr = window.devicePixelRatio || 1;
-  const viewport = page.getViewport({ scale: _currentScale * dpr });
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
-  canvas.style.width = Math.round(viewport.width / dpr) + 'px';
-  canvas.style.height = Math.round(viewport.height / dpr) + 'px';
-  await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
-}
+  async function renderPage(pdfJsDoc, pageIndex, canvas, scale) {
+    if (!pdfJsDoc) return;
+    if (canvas._renderTask) { canvas._renderTask.cancel(); canvas._renderTask = null; }
+    const page = await pdfJsDoc.getPage(pageIndex + 1);
+    const viewport = page.getViewport({ scale: scale });
+    canvas.width  = viewport.width;
+    canvas.height = viewport.height;
+    canvas._renderTask = page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport });
+    try {
+      await canvas._renderTask.promise;
+    } catch(e) {
+      if (e && e.name !== 'RenderingCancelledException') console.error('render:', e);
+    }
+    canvas._renderTask = null;
+  }
 
-function updatePageInfo(infoEl, current, total) {
-  infoEl.textContent = (current + 1) + ' / ' + total;
-}
+  function updatePageInfo(el, pageIndex, total) {
+    if (el) el.textContent = (pageIndex + 1) + ' / ' + total;
+  }
 
-function updateZoomInfo(zoomEl, scale) {
-  zoomEl.textContent = '🔍 ' + Math.round(scale * 100) + '%';
-}
+  function updateZoomInfo(el, scale) {
+    if (el) el.textContent = '🔍 ' + Math.round(scale * 100) + '%';
+  }
 
-function scaleFromSlider(sliderValue) {
-  return sliderValue / 100;
-}
+  function scaleFromSlider(value) {
+    return value / 100;
+  }
 
-window.Viewer = { renderPage, updatePageInfo, updateZoomInfo, scaleFromSlider };
-if (typeof module !== 'undefined') module.exports = { renderPage, updatePageInfo, updateZoomInfo, scaleFromSlider };
+  return { renderPage, updatePageInfo, updateZoomInfo, scaleFromSlider };
+})();
+
+if (typeof module !== 'undefined') module.exports = window.Viewer;
