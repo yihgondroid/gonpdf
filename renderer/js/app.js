@@ -151,23 +151,25 @@ function enableButtons(hasFile) {
     .forEach(id => { $(id).disabled = !hasFile; });
 }
 
+async function saveActive() {
+  const st = activeState();
+  if (!st.pdfLibDoc) return;
+  const sideName = activeSide === 'left' ? '왼쪽' : '오른쪽';
+  if (!confirm(sideName + ' PDF를 저장하시겠습니까?')) return;
+  const bytes = await st.pdfLibDoc.save();
+  await window.electronAPI.saveFile(bytes, st.filename);
+}
+
 /* ── IPC (메뉴) ── */
 window.electronAPI.onMenuOpen(openFile);
-window.electronAPI.onMenuSave(() => {
-  if (!state.pdfLibDoc) return;
-  state.pdfLibDoc.save().then(bytes => window.electronAPI.saveFile(bytes, state.filename));
-});
+window.electronAPI.onMenuSave(saveActive);
 window.electronAPI.onMenuUndo(undo);
 window.electronAPI.onMenuRedo(redo);
 
 /* ── 툴바 ── */
 $('btn-open').addEventListener('click', openFile);
 
-$('btn-save').addEventListener('click', async function() {
-  if (!state.pdfLibDoc) return;
-  const bytes = await state.pdfLibDoc.save();
-  await window.electronAPI.saveFile(bytes, state.filename);
-});
+$('btn-save').addEventListener('click', saveActive);
 
 $('btn-prev').addEventListener('click', function() {
   if (state.currentPage > 0) {
