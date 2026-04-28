@@ -84,49 +84,66 @@ function $(id) { return document.getElementById(id); }
 async function openFile() {
   const result = await window.electronAPI.openFile();
   if (!result) return;
-  await loadPdf(result.buffer, result.name);
+  await loadPdf(activeSide, result.buffer, result.name);
 }
 
-async function loadPdf(buffer, name) {
+async function loadPdf(side, buffer, name) {
+  const st  = side === 'left' ? stateL : stateR;
+  const e   = sideEls(side);
   const { pdfJsDoc, pdfLibDoc } = await PdfLoader.loadPdf(buffer);
-  state.pdfJsDoc    = pdfJsDoc;
-  state.pdfLibDoc   = pdfLibDoc;
-  state.currentPage = 0;
-  state.labels      = {};
-  state.filename    = name;
-  undoStack.length  = 0;
-  redoStack.length  = 0;
+  st.pdfJsDoc    = pdfJsDoc;
+  st.pdfLibDoc   = pdfLibDoc;
+  st.currentPage = 0;
+  st.labels      = {};
+  st.filename    = name;
+  const undoStack = side === 'left' ? undoStackL : undoStackR;
+  const redoStack = side === 'left' ? redoStackL : redoStackR;
+  undoStack.length = 0;
+  redoStack.length = 0;
   $('status-filename').textContent = name;
-  $('thumbnail-count').textContent = PdfLoader.getPageCount(pdfJsDoc) + ' 페이지';
-  Thumbnail.renderThumbnails(pdfJsDoc, $('thumbnail-list'), state.labels, selectPage, handleReorder,
-    function(pi, label) { state.labels[pi] = label; });
-  Thumbnail.setSelected($('thumbnail-list'), 0);
-  await selectPage(0);
+  e.thumbnailCount.textContent = PdfLoader.getPageCount(pdfJsDoc) + ' 페이지';
+  Thumbnail.renderThumbnails(pdfJsDoc, e.thumbnailList, st.labels,
+    (pi) => selectPage(side, pi),
+    (oi, ni) => handleReorder(side, oi, ni),
+    (pi, label) => { st.labels[pi] = label; });
+  Thumbnail.setSelected(e.thumbnailList, 0);
+  await selectPage(side, 0);
   enableButtons(true);
 }
 
-async function selectPage(pageIndex) {
-  state.currentPage = pageIndex;
-  await Viewer.renderPage(state.pdfJsDoc, pageIndex, $('viewer-canvas'), state.scale);
-  Viewer.updatePageInfo($('viewer-page-info'), pageIndex, PdfLoader.getPageCount(state.pdfJsDoc));
+async function selectPage(side, pageIndex) {
+  const st = side === 'left' ? stateL : stateR;
+  const e  = sideEls(side);
+  st.currentPage = pageIndex;
+  await Viewer.renderPage(st.pdfJsDoc, pageIndex, e.viewerCanvas, st.scale);
+  Viewer.updatePageInfo(e.pageInfo, pageIndex, PdfLoader.getPageCount(st.pdfJsDoc));
 }
 
 async function reloadPdf() {
-  const newBytes = await state.pdfLibDoc.save();
+  const side = activeSide;
+  const st   = activeState();
+  const e    = sideEls(side);
+  const newBytes = await st.pdfLibDoc.save();
   const { pdfJsDoc, pdfLibDoc } = await PdfLoader.loadPdf(newBytes.buffer);
-  state.pdfJsDoc    = pdfJsDoc;
-  state.pdfLibDoc   = pdfLibDoc;
-  state.currentPage = Math.min(state.currentPage, pdfJsDoc.numPages - 1);
-  $('thumbnail-count').textContent = pdfJsDoc.numPages + ' 페이지';
-  Thumbnail.renderThumbnails(pdfJsDoc, $('thumbnail-list'), state.labels, selectPage, handleReorder,
-    function(pi, label) { state.labels[pi] = label; });
-  Thumbnail.setSelected($('thumbnail-list'), state.currentPage);
-  await selectPage(state.currentPage);
+  st.pdfJsDoc    = pdfJsDoc;
+  st.pdfLibDoc   = pdfLibDoc;
+  st.currentPage = Math.min(st.currentPage, pdfJsDoc.numPages - 1);
+  e.thumbnailCount.textContent = pdfJsDoc.numPages + ' 페이지';
+  Thumbnail.renderThumbnails(pdfJsDoc, e.thumbnailList, st.labels,
+    (pi) => selectPage(side, pi),
+    (oi, ni) => handleReorder(side, oi, ni),
+    (pi, label) => { st.labels[pi] = label; });
+  Thumbnail.setSelected(e.thumbnailList, st.currentPage);
+  await selectPage(side, st.currentPage);
 }
 
-async function handleReorder(oldIdx, newIdx) {
+async function handleReorder(side, oldIdx, newIdx) {
+  const prevActive = activeSide;
+  activeSide = side;
   await pushHistory();
-  window.Editor.reorderPages(state.pdfLibDoc, oldIdx, newIdx);
+  activeSide = prevActive;
+  const st = side === 'left' ? stateL : stateR;
+  window.Editor.reorderPages(st.pdfLibDoc, oldIdx, newIdx);
 }
 
 function enableButtons(hasFile) {
