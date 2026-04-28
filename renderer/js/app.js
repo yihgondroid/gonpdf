@@ -169,6 +169,37 @@ window.electronAPI.onMenuRedo(redo);
 /* ── 툴바 ── */
 $('btn-open').addEventListener('click', openFile);
 
+function setActiveSide(side) {
+  activeSide = side;
+  document.getElementById('viewer-panel-left').classList.toggle('active', side === 'left');
+  document.getElementById('viewer-panel-right').classList.toggle('active', side === 'right');
+}
+
+$('btn-split-view').addEventListener('click', function() {
+  splitMode = !splitMode;
+  $('main-area').classList.toggle('split-mode', splitMode);
+  $('btn-split-view').classList.toggle('active', splitMode);
+  if (splitMode) {
+    setActiveSide('left');
+    document.getElementById('viewer-panel-left').classList.add('active');
+  } else {
+    document.getElementById('viewer-panel-left').classList.remove('active');
+    document.getElementById('viewer-panel-right').classList.remove('active');
+    activeSide = 'left';
+  }
+});
+
+['viewer-panel-left', 'thumbnail-panel-left', 'viewer-canvas-wrap-left', 'thumbnail-list-left'].forEach(function(id) {
+  document.getElementById(id).addEventListener('mousedown', function() {
+    if (splitMode) setActiveSide('left');
+  });
+});
+['viewer-panel-right', 'thumbnail-panel-right', 'viewer-canvas-wrap-right', 'thumbnail-list-right'].forEach(function(id) {
+  document.getElementById(id).addEventListener('mousedown', function() {
+    if (splitMode) setActiveSide('right');
+  });
+});
+
 $('btn-save').addEventListener('click', saveActive);
 
 $('btn-prev').addEventListener('click', function() {
