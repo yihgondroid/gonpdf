@@ -55,7 +55,7 @@ function createThumbnailItem(pageIndex, pdfJsDoc, label, container, onSelect, on
     badge.style.cursor = 'pointer';
     badge.addEventListener('click', function(e) {
       e.stopPropagation();
-      const cur = LABEL_CYCLE.indexOf(badge.data.label || 'unknown');
+      const cur = LABEL_CYCLE.indexOf(badge.dataset.label || 'unknown');
       const next = LABEL_CYCLE[(cur + 1) % LABEL_CYCLE.length];
       badge.dataset.label = next;
       updateBadge(badge, next);
