@@ -1,23 +1,32 @@
-﻿// thumbnail.js
+// thumbnail.js
 const THUMB_WIDTH = 160;
 
-let _selectedSet = new Set();
-let _anchor = 0;
+const _selectedSets = new WeakMap();
+const _anchors = new WeakMap();
+
+function _getSel(container) {
+  if (!_selectedSets.has(container)) _selectedSets.set(container, new Set());
+  return _selectedSets.get(container);
+}
+function _getAnchor(container) {
+  return _anchors.has(container) ? _anchors.get(container) : 0;
+}
 
 function _refreshVisuals(container) {
+  const sel = _getSel(container);
   container.querySelectorAll('.thumbnail-item').forEach(function(el) {
-    el.classList.toggle('selected', _selectedSet.has(Number(el.dataset.pageIndex)));
+    el.classList.toggle('selected', sel.has(Number(el.dataset.pageIndex)));
   });
 }
 
 function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder, onLabelChange) {
   if (!labels) labels = {};
-  _selectedSet = new Set();
-  _anchor = 0;
+  _selectedSets.set(container, new Set());
+  _anchors.set(container, 0);
   container.innerHTML = '';
 
   for (let i = 0; i < pdfJsDoc.numPages; i++) {
-    const item = createThumbnailItem(i, pdfJsDoc, labels[i] || 'unknown', onSelect, onLabelChange);
+    const item = createThumbnailItem(i, pdfJsDoc, labels[i] || 'unknown', container, onSelect, onLabelChange);
     container.appendChild(item);
   }
 
@@ -33,7 +42,7 @@ function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder, onLa
 
 const LABEL_CYCLE = ['unknown', 'question', 'answer'];
 
-function createThumbnailItem(pageIndex, pdfJsDoc, label, onSelect, onLabelChange) {
+function createThumbnailItem(pageIndex, pdfJsDoc, label, container, onSelect, onLabelChange) {
   const item = document.createElement('div');
   item.className = 'thumbnail-item';
   item.dataset.pageIndex = pageIndex;
@@ -46,7 +55,7 @@ function createThumbnailItem(pageIndex, pdfJsDoc, label, onSelect, onLabelChange
     badge.style.cursor = 'pointer';
     badge.addEventListener('click', function(e) {
       e.stopPropagation();
-      const cur = LABEL_CYCLE.indexOf(badge.dataset.label || 'unknown');
+      const cur = LABEL_CYCLE.indexOf(badge.data.label || 'unknown');
       const next = LABEL_CYCLE[(cur + 1) % LABEL_CYCLE.length];
       badge.dataset.label = next;
       updateBadge(badge, next);
@@ -61,20 +70,21 @@ function createThumbnailItem(pageIndex, pdfJsDoc, label, onSelect, onLabelChange
   item.appendChild(pageNum);
 
   item.addEventListener('click', function(e) {
-    const container = item.parentNode;
+    const sel = _getSel(container);
+    const anchor = _getAnchor(container);
     if (e.ctrlKey || e.metaKey) {
-      if (_selectedSet.has(pageIndex)) _selectedSet.delete(pageIndex);
-      else _selectedSet.add(pageIndex);
-      _anchor = pageIndex;
-    } else if (e.shiftKey && _anchor >= 0) {
-      const min = Math.min(_anchor, pageIndex);
-      const max = Math.max(_anchor, pageIndex);
-      _selectedSet.clear();
-      for (let i = min; i <= max; i++) _selectedSet.add(i);
+      if (sel.has(pageIndex)) sel.delete(pageIndex);
+      else sel.add(pageIndex);
+      _anchors.set(container, pageIndex);
+    } else if (e.shiftKey && anchor >= 0) {
+      const min = Math.min(anchor, pageIndex);
+      const max = Math.max(anchor, pageIndex);
+      sel.clear();
+      for (let i = min; i <= max; i++) sel.add(i);
     } else {
-      _selectedSet.clear();
-      _selectedSet.add(pageIndex);
-      _anchor = pageIndex;
+      sel.clear();
+      sel.add(pageIndex);
+      _anchors.set(container, pageIndex);
     }
     _refreshVisuals(container);
     onSelect(pageIndex);
@@ -91,9 +101,13 @@ async function renderThumbCanvas(pdfJsDoc, pageIndex, canvas) {
   const scaledViewport = page.getViewport({ scale: scale });
   canvas.width = scaledViewport.width;
   canvas.height = scaledViewport.height;
-  canvas.style.width = '100%';
-  canvas.style.aspectRatio = scaledViewport.width + ' / ' + scaledViewport.height;
   await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
+  const img = document.createElement('img');
+  img.src = canvas.toDataURL();
+  img.style.width = '100%';
+  img.style.height = 'auto';
+  img.style.display = 'block';
+  if (canvas.parentNode) canvas.parentNode.replaceChild(img, canvas);
 }
 
 function createBadge(label, pageIndex) {
@@ -120,13 +134,13 @@ function updateBadge(badgeEl, label) {
 }
 
 function setSelected(container, pageIndex) {
-  _selectedSet = new Set([pageIndex]);
-  _anchor = pageIndex;
+  _selectedSets.set(container, new Set([pageIndex]));
+  _anchors.set(container, pageIndex);
   _refreshVisuals(container);
 }
 
-function getSelectedIndices() {
-  return Array.from(_selectedSet).sort(function(a, b) { return a - b; });
+function getSelectedIndices(container) {
+  return Array.from(_getSel(container)).sort(function(a, b) { return a - b; });
 }
 
 function updateAllBadges(container, labels) {
