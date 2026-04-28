@@ -202,85 +202,89 @@ $('btn-split-view').addEventListener('click', function() {
 
 $('btn-save').addEventListener('click', saveActive);
 
-$('btn-prev').addEventListener('click', function() {
-  if (state.currentPage > 0) {
-    Thumbnail.setSelected($('thumbnail-list'), state.currentPage - 1);
-    selectPage(state.currentPage - 1);
-  }
-});
+function bindSideControls(side) {
+  const e = sideEls(side);
+  const st = side === 'left' ? stateL : stateR;
 
-$('btn-next').addEventListener('click', function() {
-  if (state.pdfJsDoc && state.currentPage < state.pdfJsDoc.numPages - 1) {
-    Thumbnail.setSelected($('thumbnail-list'), state.currentPage + 1);
-    selectPage(state.currentPage + 1);
-  }
-});
-
-/* ── 줌 슬라이더 ── */
-$('zoom-slider').addEventListener('input', async function(e) {
-  state.scale = Viewer.scaleFromSlider(Number(e.target.value));
-  Viewer.updateZoomInfo($('viewer-zoom-info'), state.scale);
-  if (state.pdfJsDoc) await Viewer.renderPage(state.pdfJsDoc, state.currentPage, $('viewer-canvas'), state.scale);
-});
-
-/* ── 뷰어 휠: Ctrl+휠=줌, 경계에서 페이지 이동 ── */
-$('viewer-canvas-wrap').addEventListener('wheel', async function(e) {
-  if (!state.pdfJsDoc) return;
-  if (e.ctrlKey) {
-    e.preventDefault();
-    const slider = $('zoom-slider');
-    const newVal = Math.max(50, Math.min(400, Number(slider.value) + (e.deltaY < 0 ? 10 : -10)));
-    slider.value = newVal;
-    state.scale  = newVal / 100;
-    Viewer.updateZoomInfo($('viewer-zoom-info'), state.scale);
-    await Viewer.renderPage(state.pdfJsDoc, state.currentPage, $('viewer-canvas'), state.scale);
-    return;
-  }
-  const wrap    = $('viewer-canvas-wrap');
-  const atTop   = wrap.scrollTop <= 0;
-  const atBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 1;
-  if (e.deltaY < 0 && atTop && state.currentPage > 0) {
-    e.preventDefault();
-    await selectPage(state.currentPage - 1);
-    Thumbnail.setSelected($('thumbnail-list'), state.currentPage);
-    wrap.scrollTop = wrap.scrollHeight;
-  } else if (e.deltaY > 0 && atBottom && state.currentPage < state.pdfJsDoc.numPages - 1) {
-    e.preventDefault();
-    await selectPage(state.currentPage + 1);
-    Thumbnail.setSelected($('thumbnail-list'), state.currentPage);
-    wrap.scrollTop = 0;
-  }
-}, { passive: false });
-
-/* ── 뷰어 드래그 패닝 ── */
-(function() {
-  const wrap = $('viewer-canvas-wrap');
-  let isDragging = false, startX, startY, scrollLeft, scrollTop;
-  wrap.addEventListener('mousedown', function(e) {
-    if (e.button !== 0) return;
-    isDragging = true;
-    startX = e.clientX; startY = e.clientY;
-    scrollLeft = wrap.scrollLeft; scrollTop = wrap.scrollTop;
-    wrap.style.cursor = 'grabbing';
-    e.preventDefault();
+  e.btnPrev.addEventListener('click', function() {
+    if (st.currentPage > 0) {
+      Thumbnail.setSelected(e.thumbnailList, st.currentPage - 1);
+      selectPage(side, st.currentPage - 1);
+    }
   });
-  document.addEventListener('mousemove', function(e) {
-    if (!isDragging) return;
-    wrap.scrollLeft = scrollLeft - (e.clientX - startX);
-    wrap.scrollTop  = scrollTop  - (e.clientY - startY);
+  e.btnNext.addEventListener('click', function() {
+    if (st.pdfJsDoc && st.currentPage < st.pdfJsDoc.numPages - 1) {
+      Thumbnail.setSelected(e.thumbnailList, st.currentPage + 1);
+      selectPage(side, st.currentPage + 1);
+    }
   });
-  document.addEventListener('mouseup', function() {
-    if (!isDragging) return;
-    isDragging = false;
-    wrap.style.cursor = 'grab';
-  });
-  wrap.style.cursor = 'grab';
-})();
 
-/* ── 썸네일 패널 리사이저 ── */
-(function() {
-  const resizer = $('panel-resizer');
-  const panel   = $('thumbnail-panel');
+  e.zoomSlider.addEventListener('input', async function(ev) {
+    st.scale = Viewer.scaleFromSlider(Number(ev.target.value));
+    Viewer.updateZoomInfo(e.zoomInfo, st.scale);
+    if (st.pdfJsDoc) await Viewer.renderPage(st.pdfJsDoc, st.currentPage, e.viewerCanvas, st.scale);
+  });
+
+  e.thumbZoomSlider.addEventListener('input', function(ev) {
+    const size = ev.target.value;
+    e.thumbnailList.style.setProperty('--thumb-size', size + 'px');
+    e.thumbZoomLabel.textContent = size + 'px';
+  });
+
+  e.viewerCanvasWrap.addEventListener('wheel', async function(ev) {
+    if (!st.pdfJsDoc) return;
+    if (splitMode) setActiveSide(side);
+    if (ev.ctrlKey) {
+      ev.preventDefault();
+      const newVal = Math.max(50, Math.min(400, Number(e.zoomSlider.value) + (ev.deltaY < 0 ? 10 : -10)));
+      e.zoomSlider.value = newVal;
+      st.scale = newVal / 100;
+      Viewer.updateZoomInfo(e.zoomInfo, st.scale);
+      await Viewer.renderPage(st.pdfJsDoc, st.currentPage, e.viewerCanvas, st.scale);
+      return;
+    }
+    const atTop    = e.viewerCanvasWrap.scrollTop <= 0;
+    const atBottom = e.viewerCanvasWrap.scrollTop + e.viewerCanvasWrap.clientHeight >= e.viewerCanvasWrap.scrollHeight - 1;
+    if (ev.deltaY < 0 && atTop && st.currentPage > 0) {
+      ev.preventDefault();
+      await selectPage(side, st.currentPage - 1);
+      Thumbnail.setSelected(e.thumbnailList, st.currentPage);
+      e.viewerCanvasWrap.scrollTop = e.viewerCanvasWrap.scrollHeight;
+    } else if (ev.deltaY > 0 && atBottom && st.currentPage < st.pdfJsDoc.numPages - 1) {
+      ev.preventDefault();
+      await selectPage(side, st.currentPage + 1);
+      Thumbnail.setSelected(e.thumbnailList, st.currentPage);
+      e.viewerCanvasWrap.scrollTop = 0;
+    }
+  }, { passive: false });
+
+  (function() {
+    const wrap = e.viewerCanvasWrap;
+    let isDragging = false, startX, startY, scrollLeft, scrollTop;
+    wrap.addEventListener('mousedown', function(ev) {
+      if (ev.button !== 0) return;
+      isDragging = true;
+      startX = ev.clientX; startY = ev.clientY;
+      scrollLeft = wrap.scrollLeft; scrollTop = wrap.scrollTop;
+      wrap.style.cursor = 'grabbing';
+      ev.preventDefault();
+    });
+    document.addEventListener('mousemove', function(ev) {
+      if (!isDragging) return;
+      wrap.scrollLeft = scrollLeft - (ev.clientX - startX);
+      wrap.scrollTop  = scrollTop  - (ev.clientY - startY);
+    });
+    document.addEventListener('mouseup', function() {
+      if (!isDragging) return;
+      isDragging = false;
+      wrap.style.cursor = 'grab';
+    });
+  })();
+}
+
+function bindResizer(resizerId, panelId, direction) {
+  const resizer = $(resizerId);
+  const panel   = $(panelId);
   let startX, startWidth;
   resizer.addEventListener('mousedown', function(e) {
     startX = e.clientX;
@@ -291,7 +295,8 @@ $('viewer-canvas-wrap').addEventListener('wheel', async function(e) {
   });
   document.addEventListener('mousemove', function(e) {
     if (!resizer.classList.contains('dragging')) return;
-    const newWidth = Math.max(80, Math.min(window.innerWidth - 200, startWidth + e.clientX - startX));
+    const delta = direction === 'right' ? e.clientX - startX : startX - e.clientX;
+    const newWidth = Math.max(80, Math.min(window.innerWidth - 200, startWidth + delta));
     panel.style.width = newWidth + 'px';
   });
   document.addEventListener('mouseup', function() {
@@ -299,14 +304,12 @@ $('viewer-canvas-wrap').addEventListener('wheel', async function(e) {
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
   });
-})();
+}
 
-/* ── 썸네일 줌 슬라이더 ── */
-$('thumb-zoom-slider').addEventListener('input', function(e) {
-  const size = e.target.value;
-  $('thumbnail-list').style.setProperty('--thumb-size', size + 'px');
-  $('thumb-zoom-label').textContent = size + 'px';
-});
+bindSideControls('left');
+bindSideControls('right');
+bindResizer('panel-resizer-left',  'thumbnail-panel-left',  'right');
+bindResizer('panel-resizer-right', 'thumbnail-panel-right', 'left');
 
 /* ── 키보드 단축키 ── */
 document.addEventListener('keydown', function(e) {
