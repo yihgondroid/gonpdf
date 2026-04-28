@@ -315,12 +315,14 @@ bindResizer('panel-resizer-right', 'thumbnail-panel-right', 'left');
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); }
   if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); }
-  if (!state.pdfJsDoc) return;
+  const st = activeState();
+  const e2 = sideEls();
+  if (!st.pdfJsDoc) return;
   if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-    if (state.currentPage > 0) { selectPage(state.currentPage - 1); Thumbnail.setSelected($('thumbnail-list'), state.currentPage); }
+    if (st.currentPage > 0) { selectPage(activeSide, st.currentPage - 1); Thumbnail.setSelected(e2.thumbnailList, st.currentPage); }
   }
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-    if (state.currentPage < state.pdfJsDoc.numPages - 1) { selectPage(state.currentPage + 1); Thumbnail.setSelected($('thumbnail-list'), state.currentPage); }
+    if (st.currentPage < st.pdfJsDoc.numPages - 1) { selectPage(activeSide, st.currentPage + 1); Thumbnail.setSelected(e2.thumbnailList, st.currentPage); }
   }
 });
 
@@ -333,44 +335,51 @@ document.addEventListener('drop', async function(e) {
   e.preventDefault();
   const file = e.dataTransfer.files[0];
   if (!file || !file.name.toLowerCase().endsWith('.pdf')) return;
-  await loadPdf(await file.arrayBuffer(), file.name);
+  await loadPdf(activeSide, await file.arrayBuffer(), file.name);
 });
 
 /* ── 편집 버튼 ── */
 $('btn-delete').addEventListener('click', async function() {
-  if (!state.pdfLibDoc || state.pdfJsDoc.numPages <= 1) return;
+  const st = activeState();
+  if (!st.pdfLibDoc || st.pdfJsDoc.numPages <= 1) return;
   await pushHistory();
-  window.Editor.deletePage(state.pdfLibDoc, state.currentPage);
+  window.Editor.deletePage(st.pdfLibDoc, st.currentPage);
   await reloadPdf();
 });
 
 $('btn-merge').addEventListener('click', async function() {
+  const st   = activeState();
+  const side = activeSide;
+  const e    = sideEls(side);
   const result = await window.electronAPI.openFile();
   if (!result) return;
   await pushHistory();
   const { pdfLibDoc: doc2 } = await PdfLoader.loadPdf(result.buffer);
-  const merged   = await window.Editor.mergeDocuments([state.pdfLibDoc, doc2]);
+  const merged   = await window.Editor.mergeDocuments([st.pdfLibDoc, doc2]);
   const newBytes = await merged.save();
   const { pdfJsDoc, pdfLibDoc } = await PdfLoader.loadPdf(newBytes.buffer);
-  state.pdfJsDoc = pdfJsDoc; state.pdfLibDoc = pdfLibDoc;
-  state.currentPage = 0; state.labels = {};
-  $('thumbnail-count').textContent = pdfJsDoc.numPages + ' 페이지';
-  Thumbnail.renderThumbnails(pdfJsDoc, $('thumbnail-list'), state.labels, selectPage, handleReorder,
-    function(pi, label) { state.labels[pi] = label; });
-  await selectPage(0);
+  st.pdfJsDoc = pdfJsDoc; st.pdfLibDoc = pdfLibDoc;
+  st.currentPage = 0; st.labels = {};
+  e.thumbnailCount.textContent = pdfJsDoc.numPages + ' 페이지';
+  Thumbnail.renderThumbnails(pdfJsDoc, e.thumbnailList, st.labels,
+    (pi) => selectPage(side, pi),
+    (oi, ni) => handleReorder(side, oi, ni),
+    (pi, label) => { st.labels[pi] = label; });
+  await selectPage(side, 0);
   $('status-info').textContent = '합치기 완료 (' + pdfJsDoc.numPages + ' 페이지)';
 });
 
 $('btn-split').addEventListener('click', async function() {
-  if (!state.pdfLibDoc) return;
-  const total = state.pdfJsDoc.numPages;
+  const st = activeState();
+  if (!st.pdfLibDoc) return;
+  const total = st.pdfJsDoc.numPages;
   const input = prompt('나누기: 시작-끝 페이지 입력 (예: 1-3, 전체 ' + total + '페이지)');
   if (!input) return;
   const parts = input.split('-');
   const start = parseInt(parts[0], 10) - 1;
   const count = parseInt(parts[1], 10) - start;
   if (isNaN(start) || isNaN(count) || count <= 0) return;
-  const splitDoc = await window.Editor.splitDocument(state.pdfLibDoc, start, count);
+  const splitDoc = await window.Editor.splitDocument(st.pdfLibDoc, start, count);
   const bytes = await splitDoc.save();
   await window.electronAPI.saveFile(bytes, 'split_p' + (start+1) + '-' + (start+count) + '.pdf');
   $('status-info').textContent = '나누기 저장 완료 (' + count + ' 페이지)';
@@ -383,26 +392,30 @@ async function saveDoc(doc, defaultName) {
 }
 
 $('btn-auto-left').addEventListener('click', async function() {
-  const doc = await window.Automation.buildAutomationOutput(state.pdfLibDoc, state.labels, 'left');
+  const st = activeState();
+  const doc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'left');
   await saveDoc(doc, '문제_좌.pdf');
   $('status-info').textContent = '문제_좌.pdf 저장 완료';
 });
 
 $('btn-auto-right').addEventListener('click', async function() {
-  const doc = await window.Automation.buildAutomationOutput(state.pdfLibDoc, state.labels, 'right');
+  const st = activeState();
+  const doc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'right');
   await saveDoc(doc, '문제_우.pdf');
   $('status-info').textContent = '문제_우.pdf 저장 완료';
 });
 
 $('btn-auto-answer').addEventListener('click', async function() {
-  const doc = await window.Automation.buildAutomationOutput(state.pdfLibDoc, state.labels, 'answer');
+  const st = activeState();
+  const doc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'answer');
   await saveDoc(doc, '해설.pdf');
   $('status-info').textContent = '해설.pdf 저장 완료';
 });
 
 $('btn-auto-all').addEventListener('click', async function() {
+  const st = activeState();
   $('status-info').textContent = '전체 분리 처리 중...';
-  const outputs = await window.Automation.runAutomationAll(state.pdfLibDoc, state.labels);
+  const outputs = await window.Automation.runAutomationAll(st.pdfLibDoc, st.labels);
   const files = [];
   for (let i = 0; i < outputs.length; i++) {
     files.push({ name: outputs[i].name, buffer: await outputs[i].doc.save() });
