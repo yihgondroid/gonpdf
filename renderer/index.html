@@ -1,24 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; worker-src blob: file:;" />
+    content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; worker-src blob: file:; img-src 'self' data: blob:;" />
   <title>PDF 편집 툴</title>
   <link rel="stylesheet" href="css/main.css" />
 </head>
 <body>
-  <div id="menubar">
-    <span>파일</span>
-    <div class="menu-item">
-      <span>편집</span>
-      <div class="menu-dropdown">
-        <div class="menu-dropdown-item disabled" id="menu-undo">실행 취소 <span class="menu-shortcut">Ctrl+Z</span></div>
-        <div class="menu-dropdown-item disabled" id="menu-redo">다시 실행 <span class="menu-shortcut">Ctrl+Y</span></div>
-      </div>
-    </div>
-    <span>보기</span><span>도구</span>
-  </div>
 
   <div id="toolbar">
     <div class="toolbar-group">
@@ -38,26 +27,68 @@
       <button id="btn-auto-answer" disabled>📙 해설만</button>
       <button id="btn-auto-all" disabled>📦 전체분리</button>
     </div>
+    <div class="toolbar-sep"></div>
+    <div class="toolbar-group">
+      <button id="btn-split-view">📄 양면분할</button>
+    </div>
   </div>
 
   <div id="main-area">
-    <div id="thumbnail-panel">
-      <div id="thumbnail-count"></div>
-      <div id="thumbnail-list"></div>
-    </div>
-    <div id="panel-resizer"></div>
-    <div id="viewer-panel">
-      <div id="viewer-canvas-wrap">
-        <canvas id="viewer-canvas"></canvas>
+
+    <!-- 왼쪽 썸네일 -->
+    <div id="thumbnail-panel-left">
+      <div id="thumbnail-footer-left">
+        <span>🔍</span>
+        <input type="range" id="thumb-zoom-slider-left" min="60" max="300" value="120" step="10" />
+        <span id="thumb-zoom-label-left">120px</span>
       </div>
-      <div id="viewer-controls">
-        <button id="btn-prev">◀</button>
-        <span id="viewer-page-info">— / —</span>
-        <button id="btn-next">▶</button>
-        <span id="viewer-zoom-info">🔍 100%</span>
-        <input type="range" id="zoom-slider" min="50" max="400" value="100" step="10" />
+      <div id="thumbnail-count-left"></div>
+      <div id="thumbnail-list-left"></div>
+    </div>
+
+    <div id="panel-resizer-left"></div>
+
+    <!-- 왼쪽 뷰어 -->
+    <div id="viewer-panel-left">
+      <div id="viewer-canvas-wrap-left">
+        <canvas id="viewer-canvas-left"></canvas>
+      </div>
+      <div id="viewer-controls-left">
+        <button id="btn-prev-left">◀</button>
+        <span id="viewer-page-info-left">— / —</span>
+        <button id="btn-next-left">▶</button>
+        <span id="viewer-zoom-info-left">🔍 100%</span>
+        <input type="range" id="zoom-slider-left" min="50" max="400" value="100" step="10" />
       </div>
     </div>
+
+    <!-- 오른쪽 뷰어 -->
+    <div id="viewer-panel-right">
+      <div id="viewer-canvas-wrap-right">
+        <canvas id="viewer-canvas-right"></canvas>
+      </div>
+      <div id="viewer-controls-right">
+        <button id="btn-prev-right">◀</button>
+        <span id="viewer-page-info-right">— / —</span>
+        <button id="btn-next-right">▶</button>
+        <span id="viewer-zoom-info-right">🔍 100%</span>
+        <input type="range" id="zoom-slider-right" min="50" max="400" value="100" step="10" />
+      </div>
+    </div>
+
+    <div id="panel-resizer-right"></div>
+
+    <!-- 오른쪽 썸네일 -->
+    <div id="thumbnail-panel-right">
+      <div id="thumbnail-footer-right">
+        <span>🔍</span>
+        <input type="range" id="thumb-zoom-slider-right" min="60" max="300" value="120" step="10" />
+        <span id="thumb-zoom-label-right">120px</span>
+      </div>
+      <div id="thumbnail-count-right"></div>
+      <div id="thumbnail-list-right"></div>
+    </div>
+
   </div>
 
   <div id="statusbar">
