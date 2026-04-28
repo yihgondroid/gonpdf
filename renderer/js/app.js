@@ -1,79 +1,105 @@
-﻿// app.js
+// app.js
 const PdfLoader = window.PdfLoader;
 const Thumbnail = window.Thumbnail;
-const Viewer = window.Viewer;
+const Viewer    = window.Viewer;
 
-const undoStack = [];
-const redoStack = [];
+const stateL = { pdfJsDoc: null, pdfLibDoc: null, currentPage: 0, scale: 1.0, labels: {}, filename: '' };
+const stateR = { pdfJsDoc: null, pdfLibDoc: null, currentPage: 0, scale: 1.0, labels: {}, filename: '' };
+let activeSide = 'left';
+let splitMode  = false;
 
-async function pushHistory() {
-  if (!state.pdfLibDoc) return;
-  const bytes = await state.pdfLibDoc.save();
-  undoStack.push(bytes);
-  redoStack.length = 0;
-  updateUndoRedoUI();
+const undoStackL = [], redoStackL = [];
+const undoStackR = [], redoStackR = [];
+
+function activeState() { return activeSide === 'left' ? stateL : stateR; }
+function activeUndo()  { return activeSide === 'left' ? undoStackL : undoStackR; }
+function activeRedo()  { return activeSide === 'left' ? redoStackL : redoStackR; }
+
+function sideEls(side) {
+  const s = side || activeSide;
+  return {
+    thumbnailPanel:   document.getElementById('thumbnail-panel-' + s),
+    thumbnailList:    document.getElementById('thumbnail-list-' + s),
+    thumbnailCount:   document.getElementById('thumbnail-count-' + s),
+    viewerPanel:      document.getElementById('viewer-panel-' + s),
+    viewerCanvasWrap: document.getElementById('viewer-canvas-wrap-' + s),
+    viewerCanvas:     document.getElementById('viewer-canvas-' + s),
+    pageInfo:         document.getElementById('viewer-page-info-' + s),
+    zoomInfo:         document.getElementById('viewer-zoom-info-' + s),
+    zoomSlider:       document.getElementById('zoom-slider-' + s),
+    btnPrev:          document.getElementById('btn-prev-' + s),
+    btnNext:          document.getElementById('btn-next-' + s),
+    thumbZoomSlider:  document.getElementById('thumb-zoom-slider-' + s),
+    thumbZoomLabel:   document.getElementById('thumb-zoom-label-' + s),
+  };
 }
 
-async function restoreFromBytes(saved) {
-  const ab = saved.buffer.slice(saved.byteOffset, saved.byteOffset + saved.byteLength);
+async function pushHistory() {
+  const st = activeState();
+  if (!st.pdfLibDoc) return;
+  const bytes = await st.pdfLibDoc.save();
+  activeUndo().push(bytes);
+  activeRedo().length = 0;
+}
+
+async function restoreFromBytes(saved, side) {
+  const st   = side === 'left' ? stateL : stateR;
+  const e    = sideEls(side);
+  const ab   = saved.buffer.slice(saved.byteOffset, saved.byteOffset + saved.byteLength);
   const { pdfJsDoc, pdfLibDoc } = await PdfLoader.loadPdf(ab);
-  state.pdfJsDoc = pdfJsDoc;
-  state.pdfLibDoc = pdfLibDoc;
-  state.currentPage = Math.min(state.currentPage, pdfJsDoc.numPages - 1);
-  state.labels = {};
-  $('thumbnail-count').textContent = pdfJsDoc.numPages + ' 페이지';
-  Thumbnail.renderThumbnails(pdfJsDoc, $('thumbnail-list'), state.labels, selectPage, handleReorder, function(pageIndex, label) { state.labels[pageIndex] = label; });
-  Thumbnail.setSelected($('thumbnail-list'), state.currentPage);
-  await selectPage(state.currentPage);
+  st.pdfJsDoc    = pdfJsDoc;
+  st.pdfLibDoc   = pdfLibDoc;
+  st.currentPage = Math.min(st.currentPage, pdfJsDoc.numPages - 1);
+  st.labels      = {};
+  e.thumbnailCount.textContent = pdfJsDoc.numPages + ' 페이지';
+  Thumbnail.renderThumbnails(pdfJsDoc, e.thumbnailList, st.labels,
+    (pi) => selectPage(side, pi),
+    (oi, ni) => handleReorder(side, oi, ni),
+    (pi, label) => { st.labels[pi] = label; });
+  Thumbnail.setSelected(e.thumbnailList, st.currentPage);
+  await selectPage(side, st.currentPage);
 }
 
 async function undo() {
+  const undoStack = activeUndo();
+  const redoStack = activeRedo();
   if (undoStack.length === 0) return;
-  const current = await state.pdfLibDoc.save();
+  const current = await activeState().pdfLibDoc.save();
   redoStack.push(current);
-  await restoreFromBytes(undoStack.pop());
-  updateUndoRedoUI();
+  await restoreFromBytes(undoStack.pop(), activeSide);
 }
 
 async function redo() {
+  const undoStack = activeUndo();
+  const redoStack = activeRedo();
   if (redoStack.length === 0) return;
-  const current = await state.pdfLibDoc.save();
+  const current = await activeState().pdfLibDoc.save();
   undoStack.push(current);
-  await restoreFromBytes(redoStack.pop());
-  updateUndoRedoUI();
+  await restoreFromBytes(redoStack.pop(), activeSide);
 }
-
-function updateUndoRedoUI() {
-  $('menu-undo').classList.toggle('disabled', undoStack.length === 0);
-  $('menu-redo').classList.toggle('disabled', redoStack.length === 0);
-}
-
-const state = {
-  pdfJsDoc: null,
-  pdfLibDoc: null,
-  currentPage: 0,
-  scale: 1.0,
-  labels: {},
-  filename: '',
-};
 
 function $(id) { return document.getElementById(id); }
 
+/* ── 파일 열기 ── */
 async function openFile() {
   const result = await window.electronAPI.openFile();
   if (!result) return;
-  const { pdfJsDoc, pdfLibDoc } = await PdfLoader.loadPdf(result.buffer);
-  state.pdfJsDoc = pdfJsDoc;
-  state.pdfLibDoc = pdfLibDoc;
+  await loadPdf(result.buffer, result.name);
+}
+
+async function loadPdf(buffer, name) {
+  const { pdfJsDoc, pdfLibDoc } = await PdfLoader.loadPdf(buffer);
+  state.pdfJsDoc    = pdfJsDoc;
+  state.pdfLibDoc   = pdfLibDoc;
   state.currentPage = 0;
-  state.labels = {};
-  state.filename = result.name;
-  undoStack.length = 0;
-  redoStack.length = 0;
-  updateUndoRedoUI();
-  $('status-filename').textContent = result.name;
+  state.labels      = {};
+  state.filename    = name;
+  undoStack.length  = 0;
+  redoStack.length  = 0;
+  $('status-filename').textContent = name;
   $('thumbnail-count').textContent = PdfLoader.getPageCount(pdfJsDoc) + ' 페이지';
-  Thumbnail.renderThumbnails(pdfJsDoc, $('thumbnail-list'), state.labels, selectPage, handleReorder, function(pageIndex, label) { state.labels[pageIndex] = label; });
+  Thumbnail.renderThumbnails(pdfJsDoc, $('thumbnail-list'), state.labels, selectPage, handleReorder,
+    function(pi, label) { state.labels[pi] = label; });
   Thumbnail.setSelected($('thumbnail-list'), 0);
   await selectPage(0);
   enableButtons(true);
@@ -88,11 +114,12 @@ async function selectPage(pageIndex) {
 async function reloadPdf() {
   const newBytes = await state.pdfLibDoc.save();
   const { pdfJsDoc, pdfLibDoc } = await PdfLoader.loadPdf(newBytes.buffer);
-  state.pdfJsDoc = pdfJsDoc;
-  state.pdfLibDoc = pdfLibDoc;
+  state.pdfJsDoc    = pdfJsDoc;
+  state.pdfLibDoc   = pdfLibDoc;
   state.currentPage = Math.min(state.currentPage, pdfJsDoc.numPages - 1);
   $('thumbnail-count').textContent = pdfJsDoc.numPages + ' 페이지';
-  Thumbnail.renderThumbnails(pdfJsDoc, $('thumbnail-list'), state.labels, selectPage, handleReorder, function(pageIndex, label) { state.labels[pageIndex] = label; });
+  Thumbnail.renderThumbnails(pdfJsDoc, $('thumbnail-list'), state.labels, selectPage, handleReorder,
+    function(pi, label) { state.labels[pi] = label; });
   Thumbnail.setSelected($('thumbnail-list'), state.currentPage);
   await selectPage(state.currentPage);
 }
@@ -103,20 +130,20 @@ async function handleReorder(oldIdx, newIdx) {
 }
 
 function enableButtons(hasFile) {
-  ['btn-delete','btn-split',
-   'btn-auto-left','btn-auto-right','btn-auto-answer','btn-auto-all'].forEach(function(id) {
-    $(id).disabled = !hasFile;
-  });
+  ['btn-delete','btn-split','btn-auto-left','btn-auto-right','btn-auto-answer','btn-auto-all']
+    .forEach(id => { $(id).disabled = !hasFile; });
 }
 
-$('menu-undo').addEventListener('click', function() { if (!$('menu-undo').classList.contains('disabled')) undo(); });
-$('menu-redo').addEventListener('click', function() { if (!$('menu-redo').classList.contains('disabled')) redo(); });
-
-document.addEventListener('keydown', function(e) {
-  if (e.ctrlKey && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); }
-  if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
+/* ── IPC (메뉴) ── */
+window.electronAPI.onMenuOpen(openFile);
+window.electronAPI.onMenuSave(() => {
+  if (!state.pdfLibDoc) return;
+  state.pdfLibDoc.save().then(bytes => window.electronAPI.saveFile(bytes, state.filename));
 });
+window.electronAPI.onMenuUndo(undo);
+window.electronAPI.onMenuRedo(redo);
 
+/* ── 툴바 ── */
 $('btn-open').addEventListener('click', openFile);
 
 $('btn-save').addEventListener('click', async function() {
@@ -131,6 +158,7 @@ $('btn-prev').addEventListener('click', function() {
     selectPage(state.currentPage - 1);
   }
 });
+
 $('btn-next').addEventListener('click', function() {
   if (state.pdfJsDoc && state.currentPage < state.pdfJsDoc.numPages - 1) {
     Thumbnail.setSelected($('thumbnail-list'), state.currentPage + 1);
@@ -138,40 +166,124 @@ $('btn-next').addEventListener('click', function() {
   }
 });
 
-// 뷰어 스크롤: Ctrl+휠=확대/축소, 일반 휠=페이지 이동
-$('viewer-canvas-wrap').addEventListener('wheel', async function(e) {
-  if (!state.pdfJsDoc) return;
-  if (e.ctrlKey) {
-    e.preventDefault();
-    const slider = $('zoom-slider');
-    const step = e.deltaY < 0 ? 10 : -10;
-    const newVal = Math.max(50, Math.min(400, Number(slider.value) + step));
-    slider.value = newVal;
-    state.scale = newVal / 100;
-    Viewer.updateZoomInfo($('viewer-zoom-info'), state.scale);
-    await Viewer.renderPage(state.pdfJsDoc, state.currentPage, $('viewer-canvas'), state.scale);
-    return;
-  }
-  const wrap = $('viewer-canvas-wrap');
-  const atTop = wrap.scrollTop === 0;
-  const atBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 1;
-  if (e.deltaY < 0 && atTop && state.currentPage > 0) {
-    e.preventDefault();
-    selectPage(state.currentPage - 1);
-    wrap.scrollTop = wrap.scrollHeight;
-  } else if (e.deltaY > 0 && atBottom && state.currentPage < state.pdfJsDoc.numPages - 1) {
-    e.preventDefault();
-    selectPage(state.currentPage + 1);
-    wrap.scrollTop = 0;
-  }
-}, { passive: false });
-
+/* ── 줌 슬라이더 ── */
 $('zoom-slider').addEventListener('input', async function(e) {
   state.scale = Viewer.scaleFromSlider(Number(e.target.value));
   Viewer.updateZoomInfo($('viewer-zoom-info'), state.scale);
   if (state.pdfJsDoc) await Viewer.renderPage(state.pdfJsDoc, state.currentPage, $('viewer-canvas'), state.scale);
 });
 
+/* ── 뷰어 휠: Ctrl+휠=줌, 경계에서 페이지 이동 ── */
+$('viewer-canvas-wrap').addEventListener('wheel', async function(e) {
+  if (!state.pdfJsDoc) return;
+  if (e.ctrlKey) {
+    e.preventDefault();
+    const slider = $('zoom-slider');
+    const newVal = Math.max(50, Math.min(400, Number(slider.value) + (e.deltaY < 0 ? 10 : -10)));
+    slider.value = newVal;
+    state.scale  = newVal / 100;
+    Viewer.updateZoomInfo($('viewer-zoom-info'), state.scale);
+    await Viewer.renderPage(state.pdfJsDoc, state.currentPage, $('viewer-canvas'), state.scale);
+    return;
+  }
+  const wrap    = $('viewer-canvas-wrap');
+  const atTop   = wrap.scrollTop <= 0;
+  const atBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 1;
+  if (e.deltaY < 0 && atTop && state.currentPage > 0) {
+    e.preventDefault();
+    await selectPage(state.currentPage - 1);
+    Thumbnail.setSelected($('thumbnail-list'), state.currentPage);
+    wrap.scrollTop = wrap.scrollHeight;
+  } else if (e.deltaY > 0 && atBottom && state.currentPage < state.pdfJsDoc.numPages - 1) {
+    e.preventDefault();
+    await selectPage(state.currentPage + 1);
+    Thumbnail.setSelected($('thumbnail-list'), state.currentPage);
+    wrap.scrollTop = 0;
+  }
+}, { passive: false });
+
+/* ── 뷰어 드래그 패닝 ── */
+(function() {
+  const wrap = $('viewer-canvas-wrap');
+  let isDragging = false, startX, startY, scrollLeft, scrollTop;
+  wrap.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    isDragging = true;
+    startX = e.clientX; startY = e.clientY;
+    scrollLeft = wrap.scrollLeft; scrollTop = wrap.scrollTop;
+    wrap.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    wrap.scrollLeft = scrollLeft - (e.clientX - startX);
+    wrap.scrollTop  = scrollTop  - (e.clientY - startY);
+  });
+  document.addEventListener('mouseup', function() {
+    if (!isDragging) return;
+    isDragging = false;
+    wrap.style.cursor = 'grab';
+  });
+  wrap.style.cursor = 'grab';
+})();
+
+/* ── 썸네일 패널 리사이저 ── */
+(function() {
+  const resizer = $('panel-resizer');
+  const panel   = $('thumbnail-panel');
+  let startX, startWidth;
+  resizer.addEventListener('mousedown', function(e) {
+    startX = e.clientX;
+    startWidth = panel.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!resizer.classList.contains('dragging')) return;
+    const newWidth = Math.max(80, Math.min(window.innerWidth - 200, startWidth + e.clientX - startX));
+    panel.style.width = newWidth + 'px';
+  });
+  document.addEventListener('mouseup', function() {
+    resizer.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+})();
+
+/* ── 썸네일 줌 슬라이더 ── */
+$('thumb-zoom-slider').addEventListener('input', function(e) {
+  const size = e.target.value;
+  $('thumbnail-list').style.setProperty('--thumb-size', size + 'px');
+  $('thumb-zoom-label').textContent = size + 'px';
+});
+
+/* ── 키보드 단축키 ── */
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); }
+  if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); }
+  if (!state.pdfJsDoc) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    if (state.currentPage > 0) { selectPage(state.currentPage - 1); Thumbnail.setSelected($('thumbnail-list'), state.currentPage); }
+  }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+    if (state.currentPage < state.pdfJsDoc.numPages - 1) { selectPage(state.currentPage + 1); Thumbnail.setSelected($('thumbnail-list'), state.currentPage); }
+  }
+});
+
+/* ── 드래그앤드롭으로 파일 열기 ── */
+document.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+});
+document.addEventListener('drop', async function(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.name.toLowerCase().endsWith('.pdf')) return;
+  await loadPdf(await file.arrayBuffer(), file.name);
+});
+
+/* ── 편집 버튼 ── */
 $('btn-delete').addEventListener('click', async function() {
   if (!state.pdfLibDoc || state.pdfJsDoc.numPages <= 1) return;
   await pushHistory();
@@ -184,15 +296,14 @@ $('btn-merge').addEventListener('click', async function() {
   if (!result) return;
   await pushHistory();
   const { pdfLibDoc: doc2 } = await PdfLoader.loadPdf(result.buffer);
-  const merged = await window.Editor.mergeDocuments([state.pdfLibDoc, doc2]);
+  const merged   = await window.Editor.mergeDocuments([state.pdfLibDoc, doc2]);
   const newBytes = await merged.save();
   const { pdfJsDoc, pdfLibDoc } = await PdfLoader.loadPdf(newBytes.buffer);
-  state.pdfJsDoc = pdfJsDoc;
-  state.pdfLibDoc = pdfLibDoc;
-  state.currentPage = 0;
-  state.labels = {};
+  state.pdfJsDoc = pdfJsDoc; state.pdfLibDoc = pdfLibDoc;
+  state.currentPage = 0; state.labels = {};
   $('thumbnail-count').textContent = pdfJsDoc.numPages + ' 페이지';
-  Thumbnail.renderThumbnails(pdfJsDoc, $('thumbnail-list'), state.labels, selectPage, handleReorder, function(pageIndex, label) { state.labels[pageIndex] = label; });
+  Thumbnail.renderThumbnails(pdfJsDoc, $('thumbnail-list'), state.labels, selectPage, handleReorder,
+    function(pi, label) { state.labels[pi] = label; });
   await selectPage(0);
   $('status-info').textContent = '합치기 완료 (' + pdfJsDoc.numPages + ' 페이지)';
 });
@@ -212,7 +323,7 @@ $('btn-split').addEventListener('click', async function() {
   $('status-info').textContent = '나누기 저장 완료 (' + count + ' 페이지)';
 });
 
-
+/* ── 자동화 버튼 ── */
 async function saveDoc(doc, defaultName) {
   const bytes = await doc.save();
   await window.electronAPI.saveFile(bytes, defaultName);
@@ -235,64 +346,6 @@ $('btn-auto-answer').addEventListener('click', async function() {
   await saveDoc(doc, '해설.pdf');
   $('status-info').textContent = '해설.pdf 저장 완료';
 });
-
-// 뷰어 드래그 패닝
-(function() {
-  const wrap = $('viewer-canvas-wrap');
-  let isDragging = false, startX, startY, scrollLeft, scrollTop;
-
-  wrap.addEventListener('mousedown', function(e) {
-    if (e.button !== 0) return;
-    isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    scrollLeft = wrap.scrollLeft;
-    scrollTop = wrap.scrollTop;
-    wrap.style.cursor = 'grabbing';
-    e.preventDefault();
-  });
-
-  document.addEventListener('mousemove', function(e) {
-    if (!isDragging) return;
-    wrap.scrollLeft = scrollLeft - (e.clientX - startX);
-    wrap.scrollTop = scrollTop - (e.clientY - startY);
-  });
-
-  document.addEventListener('mouseup', function() {
-    if (!isDragging) return;
-    isDragging = false;
-    wrap.style.cursor = 'grab';
-  });
-
-  wrap.style.cursor = 'grab';
-})();
-
-// 썸네일 패널 리사이저
-(function() {
-  const resizer = $('panel-resizer');
-  const panel = $('thumbnail-panel');
-  let startX, startWidth;
-
-  resizer.addEventListener('mousedown', function(e) {
-    startX = e.clientX;
-    startWidth = panel.offsetWidth;
-    resizer.classList.add('dragging');
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  });
-
-  document.addEventListener('mousemove', function(e) {
-    if (!resizer.classList.contains('dragging')) return;
-    const newWidth = Math.max(80, Math.min(400, startWidth + e.clientX - startX));
-    panel.style.width = newWidth + 'px';
-  });
-
-  document.addEventListener('mouseup', function() {
-    resizer.classList.remove('dragging');
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-  });
-})();
 
 $('btn-auto-all').addEventListener('click', async function() {
   $('status-info').textContent = '전체 분리 처리 중...';
