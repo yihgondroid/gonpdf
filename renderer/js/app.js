@@ -101,6 +101,8 @@ async function loadPdf(side, buffer, name) {
   undoStack.length = 0;
   redoStack.length = 0;
   $('status-filename').textContent = name;
+  var placeholder = $('viewer-placeholder-' + side);
+  if (placeholder) placeholder.classList.add('hidden');
   e.thumbnailCount.textContent = PdfLoader.getPageCount(pdfJsDoc) + ' 페이지';
   Thumbnail.renderThumbnails(pdfJsDoc, e.thumbnailList, st.labels,
     (pi) => selectPage(side, pi),
@@ -147,7 +149,7 @@ async function handleReorder(side, oldIdx, newIdx) {
 }
 
 function enableButtons(hasFile) {
-  ['btn-delete','btn-split','btn-auto-classify','btn-auto-left','btn-auto-right','btn-auto-answer','btn-auto-all']
+  ['btn-delete','btn-split','btn-auto-classify','btn-auto-split','btn-auto-left','btn-auto-right','btn-auto-answer','btn-auto-all']
     .forEach(id => { $(id).disabled = !hasFile; });
 }
 
@@ -504,6 +506,20 @@ async function saveDoc(doc, defaultName) {
 function baseFilename(st) {
   return (st.filename || 'output').replace(/\.pdf$/i, '');
 }
+
+$('btn-auto-split').addEventListener('click', async function() {
+  const st = activeState();
+  const base = baseFilename(st);
+  const files = [];
+  const qDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'question');
+  files.push({ name: base + '_문제.pdf', buffer: await qDoc.save() });
+  try {
+    const aDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'answer');
+    files.push({ name: base + '_해설.pdf', buffer: await aDoc.save() });
+  } catch (e) { /* 해설 미분류 시 문제만 저장 */ }
+  await window.electronAPI.saveFiles(files);
+  $('status-info').textContent = '저장 완료: ' + files.map(function(f) { return f.name; }).join(', ');
+});
 
 $('btn-auto-left').addEventListener('click', async function() {
   const st = activeState();

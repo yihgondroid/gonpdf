@@ -23,6 +23,7 @@
     <div class="toolbar-sep"></div>
     <div class="toolbar-group automation">
       <button id="btn-auto-classify" disabled>🤖 자동분류</button>
+      <button id="btn-auto-split" disabled>📋 문제+해설</button>
       <button id="btn-auto-left" disabled>📘 문제 좌</button>
       <button id="btn-auto-right" disabled>📗 문제 우</button>
       <button id="btn-auto-answer" disabled>📙 해설만</button>
@@ -55,6 +56,7 @@
 
     <!-- 왼쪽 뷰어 -->
     <div id="viewer-panel-left">
+      <div class="viewer-placeholder" id="viewer-placeholder-left">📂<br>여기에 파일을 드래그하세요</div>
       <div id="viewer-canvas-wrap-left">
         <canvas id="viewer-canvas-left"></canvas>
       </div>
@@ -69,6 +71,7 @@
 
     <!-- 오른쪽 뷰어 -->
     <div id="viewer-panel-right">
+      <div class="viewer-placeholder" id="viewer-placeholder-right">📂<br>여기에 파일을 드래그하세요</div>
       <div id="viewer-canvas-wrap-right">
         <canvas id="viewer-canvas-right"></canvas>
       </div>

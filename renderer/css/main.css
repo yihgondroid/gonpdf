@@ -130,6 +130,7 @@ body {
   flex-direction: column;
   align-items: center;
   overflow: hidden;
+  position: relative;
 }
 #viewer-canvas-wrap-left {
   flex: 1;
@@ -140,7 +141,7 @@ body {
   cursor: grab;
 }
 #viewer-canvas-left {
-  display: inline-block;
+  display: none;
   box-shadow: 0 4px 16px rgba(160,180,200,0.4);
   border-radius: 4px;
   border: 1px solid #dce8f0;
@@ -181,6 +182,22 @@ body {
 
 .hidden { display: none !important; }
 
+/* 뷰어 비어있을 때 안내 문구 */
+.viewer-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  color: #bbc;
+  font-size: 15px;
+  text-align: center;
+  line-height: 2;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+.viewer-placeholder.hidden { display: none !important; }
+
 /* Sortable */
 .sortable-ghost { opacity: .3; }
 .sortable-drag  { opacity: .9; }
@@ -200,6 +217,7 @@ body {
   flex-direction: column;
   align-items: center;
   overflow: hidden;
+  position: relative;
 }
 #viewer-canvas-wrap-right {
   flex: 1;
@@ -210,7 +228,7 @@ body {
   cursor: grab;
 }
 #viewer-canvas-right {
-  display: inline-block;
+  display: none;
   box-shadow: 0 4px 16px rgba(160,180,200,0.4);
   border-radius: 4px;
   border: 1px solid #dce8f0;

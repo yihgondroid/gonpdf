@@ -19,6 +19,7 @@ window.Viewer = (function() {
       canvas.height = viewport.height;
       canvas.style.width  = (viewport.width  / dpr) + 'px';
       canvas.style.height = (viewport.height / dpr) + 'px';
+      canvas.style.display = 'inline-block';
       canvas.getContext('2d').drawImage(buf, 0, 0);
     } catch(e) {
       if (e && e.name !== 'RenderingCancelledException') console.error('render:', e);
