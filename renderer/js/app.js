@@ -23,7 +23,6 @@ function sideEls(side) {
     thumbnailCount:   document.getElementById('thumbnail-count-' + s),
     viewerPanel:      document.getElementById('viewer-panel-' + s),
     viewerCanvasWrap: document.getElementById('viewer-canvas-wrap-' + s),
-    viewerCanvas:     document.getElementById('viewer-canvas-' + s),
     pageInfo:         document.getElementById('viewer-page-info-' + s),
     zoomInfo:         document.getElementById('viewer-zoom-info-' + s),
     zoomSlider:       document.getElementById('zoom-slider-' + s),
@@ -42,6 +41,15 @@ async function pushHistory() {
   activeRedo().length = 0;
 }
 
+async function setupContinuousViewer(side) {
+  const st = side === 'left' ? stateL : stateR;
+  const e  = sideEls(side);
+  await Viewer.renderAllPages(st.pdfJsDoc, e.viewerCanvasWrap, st.scale, function(pi) {
+    st.currentPage = pi;
+    Viewer.updatePageInfo(e.pageInfo, pi, PdfLoader.getPageCount(st.pdfJsDoc));
+  });
+}
+
 async function restoreFromBytes(saved, side) {
   const st   = side === 'left' ? stateL : stateR;
   const e    = sideEls(side);
@@ -56,8 +64,8 @@ async function restoreFromBytes(saved, side) {
     (pi) => selectPage(side, pi),
     (oi, ni) => handleReorder(side, oi, ni),
     (pi, label) => { st.labels[pi] = label; });
-  Thumbnail.setSelected(e.thumbnailList, st.currentPage);
-  await selectPage(side, st.currentPage);
+  await setupContinuousViewer(side);
+  selectPage(side, st.currentPage);
 }
 
 async function undo() {
@@ -108,17 +116,18 @@ async function loadPdf(side, buffer, name) {
     (pi) => selectPage(side, pi),
     (oi, ni) => handleReorder(side, oi, ni),
     (pi, label) => { st.labels[pi] = label; });
-  Thumbnail.setSelected(e.thumbnailList, 0);
-  await selectPage(side, 0);
+  await setupContinuousViewer(side);
+  selectPage(side, 0);
   enableButtons(true);
 }
 
-async function selectPage(side, pageIndex) {
+function selectPage(side, pageIndex) {
   const st = side === 'left' ? stateL : stateR;
   const e  = sideEls(side);
   st.currentPage = pageIndex;
-  await Viewer.renderPage(st.pdfJsDoc, pageIndex, e.viewerCanvas, st.scale);
+  Viewer.scrollToPage(e.viewerCanvasWrap, pageIndex);
   Viewer.updatePageInfo(e.pageInfo, pageIndex, PdfLoader.getPageCount(st.pdfJsDoc));
+  Thumbnail.setSelected(e.thumbnailList, pageIndex);
 }
 
 async function reloadPdf() {
@@ -135,8 +144,8 @@ async function reloadPdf() {
     (pi) => selectPage(side, pi),
     (oi, ni) => handleReorder(side, oi, ni),
     (pi, label) => { st.labels[pi] = label; });
-  Thumbnail.setSelected(e.thumbnailList, st.currentPage);
-  await selectPage(side, st.currentPage);
+  await setupContinuousViewer(side);
+  selectPage(side, st.currentPage);
 }
 
 async function handleReorder(side, oldIdx, newIdx) {
@@ -209,16 +218,10 @@ function bindSideControls(side) {
   const st = side === 'left' ? stateL : stateR;
 
   e.btnPrev.addEventListener('click', function() {
-    if (st.currentPage > 0) {
-      Thumbnail.setSelected(e.thumbnailList, st.currentPage - 1);
-      selectPage(side, st.currentPage - 1);
-    }
+    if (st.currentPage > 0) selectPage(side, st.currentPage - 1);
   });
   e.btnNext.addEventListener('click', function() {
-    if (st.pdfJsDoc && st.currentPage < st.pdfJsDoc.numPages - 1) {
-      Thumbnail.setSelected(e.thumbnailList, st.currentPage + 1);
-      selectPage(side, st.currentPage + 1);
-    }
+    if (st.pdfJsDoc && st.currentPage < st.pdfJsDoc.numPages - 1) selectPage(side, st.currentPage + 1);
   });
 
   e.zoomSlider.addEventListener('input', function(ev) {
@@ -227,7 +230,7 @@ function bindSideControls(side) {
     if (!st.pdfJsDoc) return;
     clearTimeout(st._zoomTimer);
     st._zoomTimer = setTimeout(function() {
-      Viewer.renderPage(st.pdfJsDoc, st.currentPage, e.viewerCanvas, st.scale);
+      Viewer.rerenderAllPages(e.viewerCanvasWrap, st.pdfJsDoc, st.scale);
     }, 120);
   });
 
@@ -237,7 +240,7 @@ function bindSideControls(side) {
     e.thumbZoomLabel.textContent = size + 'px';
   });
 
-  e.viewerCanvasWrap.addEventListener('wheel', async function(ev) {
+  e.viewerCanvasWrap.addEventListener('wheel', function(ev) {
     if (!st.pdfJsDoc) return;
     if (splitMode) setActiveSide(side);
     if (ev.ctrlKey) {
@@ -248,22 +251,8 @@ function bindSideControls(side) {
       Viewer.updateZoomInfo(e.zoomInfo, st.scale);
       clearTimeout(st._zoomTimer);
       st._zoomTimer = setTimeout(function() {
-        Viewer.renderPage(st.pdfJsDoc, st.currentPage, e.viewerCanvas, st.scale);
+        Viewer.rerenderAllPages(e.viewerCanvasWrap, st.pdfJsDoc, st.scale);
       }, 120);
-      return;
-    }
-    const atTop    = e.viewerCanvasWrap.scrollTop <= 0;
-    const atBottom = e.viewerCanvasWrap.scrollTop + e.viewerCanvasWrap.clientHeight >= e.viewerCanvasWrap.scrollHeight - 1;
-    if (ev.deltaY < 0 && atTop && st.currentPage > 0) {
-      ev.preventDefault();
-      await selectPage(side, st.currentPage - 1);
-      Thumbnail.setSelected(e.thumbnailList, st.currentPage);
-      e.viewerCanvasWrap.scrollTop = e.viewerCanvasWrap.scrollHeight;
-    } else if (ev.deltaY > 0 && atBottom && st.currentPage < st.pdfJsDoc.numPages - 1) {
-      ev.preventDefault();
-      await selectPage(side, st.currentPage + 1);
-      Thumbnail.setSelected(e.thumbnailList, st.currentPage);
-      e.viewerCanvasWrap.scrollTop = 0;
     }
   }, { passive: false });
 
@@ -346,13 +335,12 @@ document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); }
   if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); }
   const st = activeState();
-  const e2 = sideEls();
   if (!st.pdfJsDoc) return;
   if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-    if (st.currentPage > 0) { selectPage(activeSide, st.currentPage - 1); Thumbnail.setSelected(e2.thumbnailList, st.currentPage); }
+    if (st.currentPage > 0) selectPage(activeSide, st.currentPage - 1);
   }
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-    if (st.currentPage < st.pdfJsDoc.numPages - 1) { selectPage(activeSide, st.currentPage + 1); Thumbnail.setSelected(e2.thumbnailList, st.currentPage); }
+    if (st.currentPage < st.pdfJsDoc.numPages - 1) selectPage(activeSide, st.currentPage + 1);
   }
 });
 
@@ -422,7 +410,8 @@ $('btn-merge').addEventListener('click', async function() {
     (pi) => selectPage(side, pi),
     (oi, ni) => handleReorder(side, oi, ni),
     (pi, label) => { st.labels[pi] = label; });
-  await selectPage(side, 0);
+  await setupContinuousViewer(side);
+  selectPage(side, 0);
   $('status-info').textContent = '합치기 완료 (' + pdfJsDoc.numPages + ' 페이지)';
 });
 
@@ -456,7 +445,6 @@ $('btn-auto-classify').addEventListener('click', async function() {
   const ANSWER_KEYWORDS = ['정답', '해설', '풀이'];
   const pageCount = st.pdfJsDoc.numPages;
 
-  // 1단계: 전 페이지 텍스트 수집
   const pageData = [];
   for (let i = 0; i < pageCount; i++) {
     const page = await st.pdfJsDoc.getPage(i + 1);
@@ -470,7 +458,6 @@ $('btn-auto-classify').addEventListener('click', async function() {
     pageData.push({ len: text.length, score: score });
   }
 
-  // 2단계: 평균 텍스트량 기준으로 기타 판별
   const avgLen = pageData.reduce(function(s, d) { return s + d.len; }, 0) / pageCount;
   const otherThreshold = Math.max(50, avgLen * 0.15);
 

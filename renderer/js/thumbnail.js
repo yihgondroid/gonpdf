@@ -76,18 +76,20 @@ function createThumbnailItem(pageIndex, pdfJsDoc, label, container, onSelect, on
       if (sel.has(pageIndex)) sel.delete(pageIndex);
       else sel.add(pageIndex);
       _anchors.set(container, pageIndex);
+      _refreshVisuals(container);
     } else if (e.shiftKey && anchor >= 0) {
       const min = Math.min(anchor, pageIndex);
       const max = Math.max(anchor, pageIndex);
       sel.clear();
       for (let i = min; i <= max; i++) sel.add(i);
+      _refreshVisuals(container);
     } else {
       sel.clear();
       sel.add(pageIndex);
       _anchors.set(container, pageIndex);
+      _refreshVisuals(container);
+      onSelect(pageIndex);
     }
-    _refreshVisuals(container);
-    onSelect(pageIndex);
   });
   renderThumbCanvas(pdfJsDoc, pageIndex, canvas);
   return item;
