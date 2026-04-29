@@ -219,10 +219,14 @@ function bindSideControls(side) {
     }
   });
 
-  e.zoomSlider.addEventListener('input', async function(ev) {
+  e.zoomSlider.addEventListener('input', function(ev) {
     st.scale = Viewer.scaleFromSlider(Number(ev.target.value));
     Viewer.updateZoomInfo(e.zoomInfo, st.scale);
-    if (st.pdfJsDoc) await Viewer.renderPage(st.pdfJsDoc, st.currentPage, e.viewerCanvas, st.scale);
+    if (!st.pdfJsDoc) return;
+    clearTimeout(st._zoomTimer);
+    st._zoomTimer = setTimeout(function() {
+      Viewer.renderPage(st.pdfJsDoc, st.currentPage, e.viewerCanvas, st.scale);
+    }, 120);
   });
 
   e.thumbZoomSlider.addEventListener('input', function(ev) {
@@ -240,7 +244,10 @@ function bindSideControls(side) {
       e.zoomSlider.value = newVal;
       st.scale = newVal / 100;
       Viewer.updateZoomInfo(e.zoomInfo, st.scale);
-      await Viewer.renderPage(st.pdfJsDoc, st.currentPage, e.viewerCanvas, st.scale);
+      clearTimeout(st._zoomTimer);
+      st._zoomTimer = setTimeout(function() {
+        Viewer.renderPage(st.pdfJsDoc, st.currentPage, e.viewerCanvas, st.scale);
+      }, 120);
       return;
     }
     const atTop    = e.viewerCanvasWrap.scrollTop <= 0;
