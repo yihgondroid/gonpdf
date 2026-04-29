@@ -501,14 +501,19 @@ async function saveDoc(doc, defaultName) {
   await window.electronAPI.saveFile(bytes, defaultName);
 }
 
+function baseFilename(st) {
+  return (st.filename || 'output').replace(/\.pdf$/i, '');
+}
+
 $('btn-auto-left').addEventListener('click', async function() {
   const st = activeState();
+  const base = baseFilename(st);
   const files = [];
   const qDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'left');
-  files.push({ name: '문제_좌.pdf', buffer: await qDoc.save() });
+  files.push({ name: base + '_문제.pdf', buffer: await qDoc.save() });
   try {
     const aDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'answer');
-    files.push({ name: '해설.pdf', buffer: await aDoc.save() });
+    files.push({ name: base + '_해설.pdf', buffer: await aDoc.save() });
   } catch (e) { /* 해설 미분류 시 문제만 저장 */ }
   await window.electronAPI.saveFiles(files);
   $('status-info').textContent = '저장 완료: ' + files.map(function(f) { return f.name; }).join(', ');
@@ -516,12 +521,13 @@ $('btn-auto-left').addEventListener('click', async function() {
 
 $('btn-auto-right').addEventListener('click', async function() {
   const st = activeState();
+  const base = baseFilename(st);
   const files = [];
   const qDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'right');
-  files.push({ name: '문제_우.pdf', buffer: await qDoc.save() });
+  files.push({ name: base + '_문제.pdf', buffer: await qDoc.save() });
   try {
     const aDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'answer');
-    files.push({ name: '해설.pdf', buffer: await aDoc.save() });
+    files.push({ name: base + '_해설.pdf', buffer: await aDoc.save() });
   } catch (e) { /* 해설 미분류 시 문제만 저장 */ }
   await window.electronAPI.saveFiles(files);
   $('status-info').textContent = '저장 완료: ' + files.map(function(f) { return f.name; }).join(', ');
@@ -529,18 +535,21 @@ $('btn-auto-right').addEventListener('click', async function() {
 
 $('btn-auto-answer').addEventListener('click', async function() {
   const st = activeState();
+  const base = baseFilename(st);
   const doc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'answer');
-  await saveDoc(doc, '해설.pdf');
-  $('status-info').textContent = '해설.pdf 저장 완료';
+  await saveDoc(doc, base + '_해설.pdf');
+  $('status-info').textContent = base + '_해설.pdf 저장 완료';
 });
 
 $('btn-auto-all').addEventListener('click', async function() {
   const st = activeState();
+  const base = baseFilename(st);
   $('status-info').textContent = '전체 분리 처리 중...';
   const outputs = await window.Automation.runAutomationAll(st.pdfLibDoc, st.labels);
+  const suffixes = ['_문제_좌', '_문제_우', '_해설'];
   const files = [];
   for (let i = 0; i < outputs.length; i++) {
-    files.push({ name: outputs[i].name, buffer: await outputs[i].doc.save() });
+    files.push({ name: base + suffixes[i] + '.pdf', buffer: await outputs[i].doc.save() });
   }
   await window.electronAPI.saveFiles(files);
   $('status-info').textContent = '전체 분리 저장 완료 (파일 3개)';
