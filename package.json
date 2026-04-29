@@ -27,5 +27,25 @@
     "transform": {
       "^.+\\.js$": "babel-jest"
     }
+  },
+  "build": {
+    "appId": "com.pdf-editor.app",
+    "productName": "PDF편집기",
+    "asar": false,
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": null
+    }
   }
 }
