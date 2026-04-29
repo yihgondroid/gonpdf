@@ -1,4 +1,4 @@
-﻿const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+﻿const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -15,6 +15,70 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
+
+  const menu = Menu.buildFromTemplate([
+    {
+      label: '파일',
+      submenu: [
+        {
+          label: '열기',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => win.webContents.send('menu:open'),
+        },
+        {
+          label: '저장',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => win.webContents.send('menu:save'),
+        },
+        { type: 'separator' },
+        {
+          label: '종료',
+          accelerator: 'Alt+F4',
+          role: 'quit',
+        },
+      ],
+    },
+    {
+      label: '편집',
+      submenu: [
+        { label: '실행 취소', accelerator: 'CmdOrCtrl+Z', click: () => win.webContents.send('menu:undo') },
+        { label: '다시 실행', accelerator: 'CmdOrCtrl+Y', click: () => win.webContents.send('menu:redo') },
+        { type: 'separator' },
+        { label: '잘라내기', accelerator: 'CmdOrCtrl+X', role: 'cut' },
+        { label: '복사', accelerator: 'CmdOrCtrl+C', role: 'copy' },
+        { label: '붙여넣기', accelerator: 'CmdOrCtrl+V', role: 'paste' },
+      ],
+    },
+    {
+      label: '보기',
+      submenu: [
+        { label: '새로 고침', accelerator: 'CmdOrCtrl+R', role: 'reload' },
+        { type: 'separator' },
+        { label: '확대', accelerator: 'CmdOrCtrl+Plus', role: 'zoomIn' },
+        { label: '축소', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
+        { label: '기본 크기', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
+        { type: 'separator' },
+        { label: '전체화면', accelerator: 'F11', role: 'togglefullscreen' },
+        { type: 'separator' },
+        { label: '개발자 도구', accelerator: 'F12', role: 'toggleDevTools' },
+      ],
+    },
+    {
+      label: '도움말',
+      submenu: [
+        {
+          label: 'PDF 편집 툴 정보',
+          click: () => dialog.showMessageBox(win, {
+            title: 'PDF 편집 툴',
+            message: 'PDF 편집 툴 v1.0.0',
+            detail: 'PDF 파일 편집, 합치기, 나누기, 자동 분류 기능을 제공합니다.',
+          }),
+        },
+      ],
+    },
+  ]);
+
+  Menu.setApplicationMenu(menu);
   win.loadFile('renderer/index.html');
 }
 

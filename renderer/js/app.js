@@ -311,6 +311,27 @@ bindSideControls('right');
 bindResizer('panel-resizer-left',  'thumbnail-panel-left',  'right');
 bindResizer('panel-resizer-right', 'thumbnail-panel-right', 'left');
 
+/* ── 전체화면 ── */
+$('btn-fullscreen').addEventListener('click', function() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+});
+
+document.addEventListener('fullscreenchange', function() {
+  const fs = !!document.fullscreenElement;
+  document.body.classList.toggle('fullscreen-mode', fs);
+  $('btn-fullscreen').classList.toggle('active', fs);
+  $('btn-fullscreen').textContent = fs ? '⛶ 창모드' : '⛶ 전체화면';
+  if (fs) {
+    const toast = $('fullscreen-toast');
+    toast.classList.add('visible');
+    setTimeout(function() { toast.classList.remove('visible'); }, 2000);
+  }
+});
+
 /* ── 키보드 단축키 ── */
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); }
@@ -327,15 +348,42 @@ document.addEventListener('keydown', function(e) {
 });
 
 /* ── 드래그앤드롭으로 파일 열기 ── */
+function getDropSide(target) {
+  if (!splitMode) return 'left';
+  const rPanel = document.getElementById('viewer-panel-right');
+  const rThumb = document.getElementById('thumbnail-panel-right');
+  return (rPanel.contains(target) || rThumb.contains(target)) ? 'right' : 'left';
+}
+
+let _dropHighlight = null;
 document.addEventListener('dragover', function(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'copy';
+  if (splitMode) {
+    const side = getDropSide(e.target);
+    if (side !== _dropHighlight) {
+      _dropHighlight = side;
+      document.getElementById('viewer-panel-left').classList.toggle('drop-target', side === 'left');
+      document.getElementById('viewer-panel-right').classList.toggle('drop-target', side === 'right');
+    }
+  }
+});
+document.addEventListener('dragleave', function(e) {
+  if (!e.relatedTarget) {
+    _dropHighlight = null;
+    document.getElementById('viewer-panel-left').classList.remove('drop-target');
+    document.getElementById('viewer-panel-right').classList.remove('drop-target');
+  }
 });
 document.addEventListener('drop', async function(e) {
   e.preventDefault();
+  _dropHighlight = null;
+  document.getElementById('viewer-panel-left').classList.remove('drop-target');
+  document.getElementById('viewer-panel-right').classList.remove('drop-target');
   const file = e.dataTransfer.files[0];
   if (!file || !file.name.toLowerCase().endsWith('.pdf')) return;
-  await loadPdf(activeSide, await file.arrayBuffer(), file.name);
+  const side = getDropSide(e.target);
+  await loadPdf(side, await file.arrayBuffer(), file.name);
 });
 
 /* ── 편집 버튼 ── */

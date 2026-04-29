@@ -283,6 +283,59 @@ body {
 #viewer-panel-left.active { border-top: 2px solid #8ab4d4; }
 #viewer-panel-right.active { border-top: 2px solid #8ab4d4; }
 
+/* 양면분할 — 왼쪽 뷰어 스크롤바를 왼쪽 끝으로 */
+#main-area.split-mode #viewer-canvas-wrap-left {
+  transform: scaleX(-1);
+}
+#main-area.split-mode #viewer-canvas-left {
+  transform: scaleX(-1);
+}
+
+/* 양면분할 — 가운데 구분선 (스크롤바 두께 ~17px의 절반) */
+#main-area.split-mode #viewer-panel-left {
+  border-right: 8px solid #8ab4d4;
+  box-shadow: 3px 0 10px rgba(80, 130, 170, 0.25);
+}
+
+/* 드래그앤드롭 드롭 존 */
+#viewer-panel-left.drop-target,
+#viewer-panel-right.drop-target {
+  outline: 3px dashed #8ab4d4;
+  outline-offset: -4px;
+  background: rgba(138, 180, 212, 0.12);
+}
+
 /* 양면분할 버튼 */
 #btn-split-view { background: #c8d8e8; }
 #btn-split-view.active { background: #8ab4d4; font-weight: bold; }
+
+/* 전체화면 버튼 */
+#btn-fullscreen { background: #c8d8e8; }
+#btn-fullscreen.active { background: #8ab4d4; font-weight: bold; }
+
+/* 전체화면 모드 — 툴바·썸네일·리사이저 숨김 */
+body.fullscreen-mode #toolbar,
+body.fullscreen-mode #statusbar,
+body.fullscreen-mode #thumbnail-panel-left,
+body.fullscreen-mode #thumbnail-panel-right,
+body.fullscreen-mode #panel-resizer-left,
+body.fullscreen-mode #panel-resizer-right { display: none !important; }
+
+/* 전체화면 진입 토스트 */
+#fullscreen-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 14px 30px;
+  border-radius: 10px;
+  font-size: 15px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+  z-index: 9999;
+  white-space: nowrap;
+}
+#fullscreen-toast.visible { opacity: 1; }
