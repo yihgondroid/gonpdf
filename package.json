@@ -30,7 +30,7 @@
   },
   "build": {
     "appId": "com.pdf-editor.app",
-    "productName": "PDF편집기",
+    "productName": "PDFEditor",
     "asar": false,
     "files": [
       "main.js",
@@ -41,7 +41,7 @@
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "zip",
           "arch": ["x64"]
         }
       ],
