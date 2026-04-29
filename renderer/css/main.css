@@ -109,10 +109,10 @@ body {
   padding: 1px 4px;
   border-radius: 3px;
   color: #fff;
-  pointer-events: none;
 }
 .badge-question { background: #7eb8d8; }
 .badge-answer { background: #e8a870; }
+.badge-other { background: #b8a8d0; }
 .badge-unknown { background: #aaa; }
 .thumbnail-page-num {
   position: absolute;

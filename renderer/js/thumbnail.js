@@ -40,7 +40,7 @@ function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder, onLa
   });
 }
 
-const LABEL_CYCLE = ['unknown', 'question', 'answer'];
+const LABEL_CYCLE = ['unknown', 'question', 'answer', 'other'];
 
 function createThumbnailItem(pageIndex, pdfJsDoc, label, container, onSelect, onLabelChange) {
   const item = document.createElement('div');
@@ -127,6 +127,9 @@ function updateBadge(badgeEl, label) {
   } else if (label === 'answer') {
     badgeEl.classList.add('badge-answer');
     badgeEl.textContent = '🟠 해설';
+  } else if (label === 'other') {
+    badgeEl.classList.add('badge-other');
+    badgeEl.textContent = '📄 기타';
   } else {
     badgeEl.classList.add('badge-unknown');
     badgeEl.textContent = '❓';

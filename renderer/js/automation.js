@@ -9,7 +9,9 @@ async function buildAutomationOutput(pdfLibDoc, labels, side, splitRatio) {
   }
   if (targetIndices.length === 0) {
     if (side === 'answer') throw new Error('해설 페이지가 없습니다. 뱃지를 클릭해 페이지를 분류해주세요.');
-    for (let i = 0; i < pageCount; i++) targetIndices.push(i);
+    for (let i = 0; i < pageCount; i++) {
+      if (labels[i] !== 'other') targetIndices.push(i);
+    }
   }
 
   const extracted = await PDFLib.PDFDocument.create();

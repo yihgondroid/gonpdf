@@ -147,7 +147,7 @@ async function handleReorder(side, oldIdx, newIdx) {
 }
 
 function enableButtons(hasFile) {
-  ['btn-delete','btn-split','btn-auto-left','btn-auto-right','btn-auto-answer','btn-auto-all']
+  ['btn-delete','btn-split','btn-auto-classify','btn-auto-left','btn-auto-right','btn-auto-answer','btn-auto-all']
     .forEach(id => { $(id).disabled = !hasFile; });
 }
 
@@ -440,6 +440,61 @@ $('btn-split').addEventListener('click', async function() {
   $('status-info').textContent = '나누기 저장 완료 (' + count + ' 페이지)';
 });
 
+/* ── 자동분류 ── */
+$('btn-auto-classify').addEventListener('click', async function() {
+  const side = activeSide;
+  const st = activeState();
+  const e = sideEls(side);
+  if (!st.pdfJsDoc) return;
+
+  $('btn-auto-classify').disabled = true;
+  $('btn-auto-classify').textContent = '⏳ 분류 중...';
+  $('status-info').textContent = '자동분류 중...';
+
+  const ANSWER_KEYWORDS = ['정답', '해설', '풀이'];
+  const pageCount = st.pdfJsDoc.numPages;
+
+  // 1단계: 전 페이지 텍스트 수집
+  const pageData = [];
+  for (let i = 0; i < pageCount; i++) {
+    const page = await st.pdfJsDoc.getPage(i + 1);
+    const textContent = await page.getTextContent();
+    const text = textContent.items.map(function(item) { return item.str; }).join('');
+    let score = 0;
+    ANSWER_KEYWORDS.forEach(function(kw) {
+      const m = text.match(new RegExp(kw, 'g'));
+      if (m) score += m.length;
+    });
+    pageData.push({ len: text.length, score: score });
+  }
+
+  // 2단계: 평균 텍스트량 기준으로 기타 판별
+  const avgLen = pageData.reduce(function(s, d) { return s + d.len; }, 0) / pageCount;
+  const otherThreshold = Math.max(50, avgLen * 0.15);
+
+  let countQ = 0, countA = 0, countO = 0;
+  for (let i = 0; i < pageCount; i++) {
+    const { len, score } = pageData[i];
+    if (len < otherThreshold) {
+      st.labels[i] = 'other'; countO++;
+    } else if (score >= 3) {
+      st.labels[i] = 'answer'; countA++;
+    } else {
+      st.labels[i] = 'question'; countQ++;
+    }
+  }
+
+  Thumbnail.updateAllBadges(e.thumbnailList, st.labels);
+  $('btn-auto-classify').disabled = false;
+  $('btn-auto-classify').textContent = '🤖 자동분류';
+
+  if (avgLen < 10) {
+    $('status-info').textContent = '텍스트를 인식할 수 없음 (스캔 PDF는 수동분류 필요)';
+  } else {
+    $('status-info').textContent = '자동분류 완료 — 문제 ' + countQ + '쪽 / 해설 ' + countA + '쪽 / 기타 ' + countO + '쪽';
+  }
+});
+
 /* ── 자동화 버튼 ── */
 async function saveDoc(doc, defaultName) {
   const bytes = await doc.save();
@@ -448,16 +503,28 @@ async function saveDoc(doc, defaultName) {
 
 $('btn-auto-left').addEventListener('click', async function() {
   const st = activeState();
-  const doc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'left');
-  await saveDoc(doc, '문제_좌.pdf');
-  $('status-info').textContent = '문제_좌.pdf 저장 완료';
+  const files = [];
+  const qDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'left');
+  files.push({ name: '문제_좌.pdf', buffer: await qDoc.save() });
+  try {
+    const aDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'answer');
+    files.push({ name: '해설.pdf', buffer: await aDoc.save() });
+  } catch (e) { /* 해설 미분류 시 문제만 저장 */ }
+  await window.electronAPI.saveFiles(files);
+  $('status-info').textContent = '저장 완료: ' + files.map(function(f) { return f.name; }).join(', ');
 });
 
 $('btn-auto-right').addEventListener('click', async function() {
   const st = activeState();
-  const doc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'right');
-  await saveDoc(doc, '문제_우.pdf');
-  $('status-info').textContent = '문제_우.pdf 저장 완료';
+  const files = [];
+  const qDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'right');
+  files.push({ name: '문제_우.pdf', buffer: await qDoc.save() });
+  try {
+    const aDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'answer');
+    files.push({ name: '해설.pdf', buffer: await aDoc.save() });
+  } catch (e) { /* 해설 미분류 시 문제만 저장 */ }
+  await window.electronAPI.saveFiles(files);
+  $('status-info').textContent = '저장 완료: ' + files.map(function(f) { return f.name; }).join(', ');
 });
 
 $('btn-auto-answer').addEventListener('click', async function() {
