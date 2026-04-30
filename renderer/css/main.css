@@ -41,6 +41,65 @@ body {
 #btn-auto-answer { background: #f0d8b8; }
 #btn-auto-all { background: #f4a8a8; border: 1px solid #e08080; font-weight: bold; }
 
+/* ── 탭 바 ── */
+#tab-bar-container {
+  display: none;
+  background: #e4eef5;
+  border-bottom: 1px solid #c0d0dc;
+  flex-shrink: 0;
+}
+#tab-bar-container.visible { display: flex; }
+#tab-bar-left {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  padding: 4px 8px 0;
+  gap: 2px;
+  overflow-x: auto;
+  min-height: 32px;
+}
+#tab-bar-right {
+  display: none;
+  flex: 1;
+  align-items: flex-end;
+  padding: 4px 8px 0;
+  gap: 2px;
+  overflow-x: auto;
+  min-height: 32px;
+  border-left: 1px solid #c0d0dc;
+}
+body.split-mode #tab-bar-right { display: flex; }
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  background: #c8d8e8;
+  border-radius: 5px 5px 0 0;
+  border: 1px solid #b0c8d8;
+  border-bottom: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: #556;
+  max-width: 180px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+.tab-item:hover { background: #bacfe0; }
+.tab-item.active { background: #f0f4f8; color: #334; font-weight: 500; border-color: #a0bcd0; }
+.tab-name { overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+.tab-close {
+  font-size: 14px;
+  color: #99a;
+  line-height: 1;
+  flex-shrink: 0;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.tab-close:hover { background: #e0b8b8; color: #b44; }
+body.fullscreen-mode #tab-bar-container { display: none !important; }
+
 #main-area { display: flex; flex: 1; overflow: hidden; }
 
 #panel-resizer-left {
