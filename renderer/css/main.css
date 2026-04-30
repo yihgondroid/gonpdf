@@ -9,6 +9,7 @@ body {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  user-select: none;
 }
 
 #toolbar {
@@ -74,19 +75,19 @@ body.split-mode #tab-bar-right { display: flex; }
   align-items: center;
   gap: 5px;
   padding: 4px 8px;
-  background: #c8d8e8;
+  background: #dce8f2;
   border-radius: 5px 5px 0 0;
-  border: 1px solid #b0c8d8;
+  border: 1px solid #c4d8e6;
   border-bottom: none;
-  cursor: pointer;
+  cursor: grab;
   font-size: 11px;
-  color: #556;
+  color: #667;
   max-width: 180px;
   white-space: nowrap;
   flex-shrink: 0;
   transition: background 0.1s;
 }
-.tab-item:hover { background: #bacfe0; }
+.tab-item:hover { background: #cfe0ec; }
 .tab-item.active { background: #f0f4f8; color: #334; font-weight: 500; border-color: #a0bcd0; }
 .tab-name { overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
 .tab-close {
@@ -96,6 +97,7 @@ body.split-mode #tab-bar-right { display: flex; }
   flex-shrink: 0;
   border-radius: 3px;
   padding: 0 2px;
+  cursor: pointer;
 }
 .tab-close:hover { background: #e0b8b8; color: #b44; }
 body.fullscreen-mode #tab-bar-container { display: none !important; }
@@ -145,6 +147,15 @@ body.fullscreen-mode #tab-bar-container { display: none !important; }
   gap: 6px;
   align-content: start;
   align-items: start;
+  position: relative;
+}
+
+.drag-select-overlay {
+  position: absolute;
+  border: 1px solid #8ab4d4;
+  background: rgba(138, 180, 212, 0.2);
+  pointer-events: none;
+  z-index: 10;
 }
 
 .thumbnail-item {
@@ -364,6 +375,7 @@ body.fullscreen-mode #tab-bar-container { display: none !important; }
   gap: 6px;
   align-content: start;
   align-items: start;
+  position: relative;
 }
 
 /* 포커스 표시 */

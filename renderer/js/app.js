@@ -302,6 +302,13 @@ $('btn-split-view').addEventListener('click', function() {
     document.getElementById('viewer-panel-left').classList.remove('active');
     document.getElementById('viewer-panel-right').classList.remove('active');
     activeSide = 'left';
+    // 오른쪽 로드된 탭들을 왼쪽으로 병합
+    tabsR.filter(function(t) { return t.pdfJsDoc !== null; })
+         .forEach(function(t) { tabsL.push(t); });
+    tabsR.length = 0;
+    tabsR.push(createTab());
+    activeTabR = 0;
+    renderTabBar('left');
   }
 });
 
@@ -396,7 +403,8 @@ function bindSideControls(side) {
     });
     document.addEventListener('mousemove', function(ev) {
       if (!isDragging) return;
-      wrap.scrollLeft = scrollLeft - (ev.clientX - startX);
+      const flipX = (splitMode && side === 'left') ? -1 : 1;
+      wrap.scrollLeft = scrollLeft - flipX * (ev.clientX - startX);
       wrap.scrollTop  = scrollTop  - (ev.clientY - startY);
     });
     document.addEventListener('mouseup', function() {
@@ -444,6 +452,58 @@ bindSideControls('right');
 bindResizer('panel-resizer-left',  'thumbnail-panel-left',  'right');
 bindResizer('panel-resizer-right', 'thumbnail-panel-right', 'left');
 
+// ── 탭 드래그 정렬 ──────────────────────────────────────────────
+function initTabSortable() {
+  ['left', 'right'].forEach(function(side) {
+    window.Sortable.create($('tab-bar-' + side), {
+      group: 'pdf-tabs',
+      animation: 150,
+      filter: '.tab-close',
+      onEnd: function(evt) {
+        if (evt.from === evt.to && evt.oldIndex === evt.newIndex) return;
+        const fromSide = evt.from.id === 'tab-bar-left' ? 'left' : 'right';
+        const toSide   = evt.to.id   === 'tab-bar-left' ? 'left' : 'right';
+        const fromTabs = fromSide === 'left' ? tabsL : tabsR;
+        const toTabs   = toSide   === 'left' ? tabsL : tabsR;
+
+        if (fromSide === toSide) {
+          const tab = fromTabs.splice(evt.oldIndex, 1)[0];
+          fromTabs.splice(evt.newIndex, 0, tab);
+          let ai = fromSide === 'left' ? activeTabL : activeTabR;
+          if (ai === evt.oldIndex) {
+            ai = evt.newIndex;
+          } else if (evt.oldIndex < evt.newIndex && ai > evt.oldIndex && ai <= evt.newIndex) {
+            ai--;
+          } else if (evt.oldIndex > evt.newIndex && ai >= evt.newIndex && ai < evt.oldIndex) {
+            ai++;
+          }
+          if (fromSide === 'left') activeTabL = ai;
+          else activeTabR = ai;
+          renderTabBar(fromSide);
+        } else {
+          const tab = fromTabs.splice(evt.oldIndex, 1)[0];
+          toTabs.splice(evt.newIndex, 0, tab);
+          let fromAi = fromSide === 'left' ? activeTabL : activeTabR;
+          if (fromTabs.length === 0) {
+            fromTabs.push(createTab());
+            fromAi = 0;
+          } else {
+            if (fromAi === evt.oldIndex) fromAi = Math.min(fromAi, fromTabs.length - 1);
+            else if (fromAi > evt.oldIndex) fromAi--;
+          }
+          if (fromSide === 'left') activeTabL = fromAi;
+          else activeTabR = fromAi;
+          if (toSide === 'left') activeTabL = evt.newIndex;
+          else activeTabR = evt.newIndex;
+          switchTab(fromSide, fromSide === 'left' ? activeTabL : activeTabR);
+          switchTab(toSide,   toSide   === 'left' ? activeTabL : activeTabR);
+        }
+      }
+    });
+  });
+}
+initTabSortable();
+
 // ── 전체화면 ──────────────────────────────────────────────
 $('btn-fullscreen').addEventListener('click', function() {
   if (!document.fullscreenElement) {
@@ -469,6 +529,10 @@ document.addEventListener('fullscreenchange', function() {
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); }
   if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); }
+  if (e.key === 'Escape') {
+    Thumbnail.clearSelection(sideEls('left').thumbnailList);
+    if (splitMode) Thumbnail.clearSelection(sideEls('right').thumbnailList);
+  }
   const st = activeState();
   if (!st.pdfJsDoc) return;
   if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
@@ -512,10 +576,13 @@ document.addEventListener('drop', async function(e) {
   _dropHighlight = null;
   document.getElementById('viewer-panel-left').classList.remove('drop-target');
   document.getElementById('viewer-panel-right').classList.remove('drop-target');
-  const file = e.dataTransfer.files[0];
-  if (!file || !file.name.toLowerCase().endsWith('.pdf')) return;
   const side = getDropSide(e.target);
-  await loadPdf(side, await file.arrayBuffer(), file.name);
+  const files = Array.from(e.dataTransfer.files).filter(function(f) {
+    return f.name.toLowerCase().endsWith('.pdf');
+  });
+  for (const file of files) {
+    await loadPdf(side, await file.arrayBuffer(), file.name);
+  }
 });
 
 // ── 편집 버튼 ──────────────────────────────────────────────
@@ -577,7 +644,8 @@ $('btn-auto-classify').addEventListener('click', async function() {
   $('btn-auto-classify').textContent = '⏳ 분류 중...';
   $('status-info').textContent = '자동분류 중...';
 
-  const ANSWER_KEYWORDS = ['정답', '해설', '풀이'];
+  const ANSWER_KEYWORDS   = ['정답', '해설', '풀이', '답', '따라서', '이므로', '므로', '에 의하여'];
+  const QUESTION_KEYWORDS = ['구하시오', '\\?'];
   const pageCount = st.pdfJsDoc.numPages;
 
   const pageData = [];
@@ -590,7 +658,14 @@ $('btn-auto-classify').addEventListener('click', async function() {
       const m = text.match(new RegExp(kw, 'g'));
       if (m) score += m.length;
     });
-    pageData.push({ len: text.length, score: score });
+    let qScore = 0;
+    QUESTION_KEYWORDS.forEach(function(kw) {
+      const m = text.match(new RegExp(kw, 'g'));
+      if (m) qScore += m.length;
+    });
+    const koreanCount = (text.match(/[가-힣]/g) || []).length;
+    const koreanRatio = text.length > 0 ? koreanCount / text.length : 0;
+    pageData.push({ len: text.length, score: score, qScore: qScore, koreanRatio: koreanRatio });
   }
 
   const avgLen = pageData.reduce(function(s, d) { return s + d.len; }, 0) / pageCount;
@@ -598,10 +673,12 @@ $('btn-auto-classify').addEventListener('click', async function() {
 
   let countQ = 0, countA = 0, countO = 0;
   for (let i = 0; i < pageCount; i++) {
-    const { len, score } = pageData[i];
-    if (len < otherThreshold) {
+    const { len, score, qScore, koreanRatio } = pageData[i];
+    if (score >= 3) {
+      st.labels[i] = 'answer'; countA++;
+    } else if (len < otherThreshold && qScore === 0) {
       st.labels[i] = 'other'; countO++;
-    } else if (score >= 3) {
+    } else if (koreanRatio < 0.1 && qScore === 0) {
       st.labels[i] = 'answer'; countA++;
     } else {
       st.labels[i] = 'question'; countQ++;

@@ -3,6 +3,7 @@ const THUMB_WIDTH = 160;
 
 const _selectedSets = new WeakMap();
 const _anchors = new WeakMap();
+const _dragSelectInited = new WeakSet();
 
 function _getSel(container) {
   if (!_selectedSets.has(container)) _selectedSets.set(container, new Set());
@@ -19,11 +20,71 @@ function _refreshVisuals(container) {
   });
 }
 
+function initDragSelect(container) {
+  if (_dragSelectInited.has(container)) return;
+  _dragSelectInited.add(container);
+
+  let active = false, startX, startY, overlay;
+
+  container.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    if (e.target.closest('.thumbnail-item')) return;
+    active = true;
+    const cr = container.getBoundingClientRect();
+    startX = e.clientX - cr.left + container.scrollLeft;
+    startY = e.clientY - cr.top + container.scrollTop;
+    _selectedSets.set(container, new Set());
+    _refreshVisuals(container);
+    overlay = document.createElement('div');
+    overlay.className = 'drag-select-overlay';
+    overlay.style.left = startX + 'px';
+    overlay.style.top = startY + 'px';
+    overlay.style.width = '0';
+    overlay.style.height = '0';
+    container.appendChild(overlay);
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!active) return;
+    const cr = container.getBoundingClientRect();
+    const curX = e.clientX - cr.left + container.scrollLeft;
+    const curY = e.clientY - cr.top + container.scrollTop;
+    const x = Math.min(startX, curX);
+    const y = Math.min(startY, curY);
+    const w = Math.abs(curX - startX);
+    const h = Math.abs(curY - startY);
+    overlay.style.left = x + 'px';
+    overlay.style.top = y + 'px';
+    overlay.style.width = w + 'px';
+    overlay.style.height = h + 'px';
+    const sel = _getSel(container);
+    sel.clear();
+    container.querySelectorAll('.thumbnail-item').forEach(function(item) {
+      const ir = item.getBoundingClientRect();
+      const itemX = ir.left - cr.left + container.scrollLeft;
+      const itemY = ir.top - cr.top + container.scrollTop;
+      if (itemX < x + w && itemX + ir.width > x && itemY < y + h && itemY + ir.height > y) {
+        sel.add(Number(item.dataset.pageIndex));
+      }
+    });
+    _refreshVisuals(container);
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!active) return;
+    active = false;
+    if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    overlay = null;
+  });
+}
+
 function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder, onLabelChange) {
   if (!labels) labels = {};
   _selectedSets.set(container, new Set());
   _anchors.set(container, 0);
   container.innerHTML = '';
+  initDragSelect(container);
 
   for (let i = 0; i < pdfJsDoc.numPages; i++) {
     const item = createThumbnailItem(i, pdfJsDoc, labels[i] || 'unknown', container, onSelect, onLabelChange);
@@ -138,6 +199,12 @@ function updateBadge(badgeEl, label) {
   }
 }
 
+function clearSelection(container) {
+  _selectedSets.set(container, new Set());
+  _anchors.set(container, 0);
+  _refreshVisuals(container);
+}
+
 function setSelected(container, pageIndex) {
   _selectedSets.set(container, new Set([pageIndex]));
   _anchors.set(container, pageIndex);
@@ -155,5 +222,5 @@ function updateAllBadges(container, labels) {
   });
 }
 
-window.Thumbnail = { renderThumbnails, setSelected, updateAllBadges, getSelectedIndices };
-if (typeof module !== 'undefined') module.exports = { renderThumbnails, setSelected, updateAllBadges, getSelectedIndices };
+window.Thumbnail = { renderThumbnails, setSelected, clearSelection, updateAllBadges, getSelectedIndices };
+if (typeof module !== 'undefined') module.exports = { renderThumbnails, setSelected, clearSelection, updateAllBadges, getSelectedIndices };
