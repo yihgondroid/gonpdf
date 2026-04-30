@@ -38,9 +38,9 @@ body {
 
 #btn-open, #btn-save { background: #b8d4e8; }
 #btn-delete, #btn-merge, #btn-split { background: #c8e0d0; }
-#btn-auto-left, #btn-auto-right { background: #aed6c8; }
-#btn-auto-answer { background: #f0d8b8; }
-#btn-auto-all { background: #f4a8a8; border: 1px solid #e08080; font-weight: bold; }
+#btn-auto-classify, #btn-auto-split,
+#btn-auto-left, #btn-auto-right,
+#btn-auto-answer, #btn-auto-all { background: #d0c8e4; }
 
 /* ── 탭 바 ── */
 #tab-bar-container {
@@ -169,7 +169,7 @@ body.fullscreen-mode #tab-bar-container { display: none !important; }
   flex-shrink: 0;
   width: var(--thumb-size, 120px);
 }
-.thumbnail-item.selected { border-color: #8ab4d4; }
+.thumbnail-item.selected { border-color: #3a80b8; border-width: 3px; box-shadow: 0 0 0 1px #3a80b8; }
 .thumbnail-item canvas { display: block; width: 100%; }
 .thumbnail-item img { display: block; width: 100%; height: auto; }
 .thumbnail-badge {
@@ -438,3 +438,118 @@ body.fullscreen-mode #panel-resizer-right { display: none !important; }
   white-space: nowrap;
 }
 #fullscreen-toast.visible { opacity: 1; }
+
+/* 확인 다이얼로그 */
+#confirm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 9500;
+  align-items: center;
+  justify-content: center;
+}
+#confirm-overlay.visible { display: flex; }
+#confirm-box {
+  background: #f0f4f8;
+  border: 1px solid #a0b8cc;
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  padding: 24px 28px 20px;
+  min-width: 340px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-family: 'Malgun Gothic', sans-serif;
+}
+#confirm-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e8a830;
+  color: #fff;
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+#confirm-message {
+  font-size: 13px;
+  color: #223;
+  line-height: 1.6;
+  word-break: break-all;
+  margin: 0;
+}
+#confirm-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+#confirm-buttons button {
+  padding: 6px 20px;
+  border: 1px solid #a0b8cc;
+  border-radius: 4px;
+  background: #e8f0f7;
+  color: #334;
+  font-size: 12px;
+  font-family: 'Malgun Gothic', sans-serif;
+  cursor: pointer;
+  min-width: 72px;
+  transition: background 0.1s;
+}
+#confirm-buttons button:hover { background: #c8dcea; }
+#confirm-yes { background: #b8d4e8; border-color: #8ab4d4; font-weight: 500; }
+#confirm-yes:hover { background: #9ac4dc; }
+
+.save-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 10px;
+}
+.save-file-badge {
+  display: block;
+  background: #dce8f2;
+  border: 1px solid #a8c4d8;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: #334;
+  font-family: 'Malgun Gothic', monospace;
+}
+
+/* 컨텍스트 메뉴 */
+#context-menu {
+  display: none;
+  position: fixed;
+  z-index: 9000;
+  background: #fff;
+  border: 1px solid #c0d0dc;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  min-width: 175px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+#context-menu.visible { display: block; }
+.ctx-item {
+  padding: 7px 16px;
+  cursor: pointer;
+  color: #334;
+  white-space: nowrap;
+}
+.ctx-item:hover { background: #e8f0f7; }
+.ctx-item.disabled { color: #bbb; cursor: default; }
+.ctx-item.disabled:hover { background: none; }
+.ctx-item.ctx-danger { color: #c04040; }
+.ctx-item.ctx-danger:hover { background: #fdeaea; }
+.ctx-sep { height: 1px; background: #e0e8f0; margin: 3px 0; }
+
+.thumbnail-item.dragging-selected {
+  opacity: 0.4;
+  outline: 2px dashed #8ab4d4;
+}

@@ -5,7 +5,9 @@ window.Viewer = (function() {
     if (canvas._renderTask) { canvas._renderTask.cancel(); canvas._renderTask = null; }
     const page = await pdfJsDoc.getPage(pageIndex + 1);
     const dpr = window.devicePixelRatio || 1;
-    const viewport = page.getViewport({ scale: scale * dpr });
+    // 줌이 낮을수록 추가 배율을 올려 항상 2x 이상 픽셀 밀도를 유지
+    const sharp = Math.max(1, Math.min(2, 2 / scale));
+    const viewport = page.getViewport({ scale: scale * dpr * sharp });
     const buf = document.createElement('canvas');
     buf.width  = viewport.width;
     buf.height = viewport.height;
@@ -14,8 +16,8 @@ window.Viewer = (function() {
       await canvas._renderTask.promise;
       canvas.width  = viewport.width;
       canvas.height = viewport.height;
-      canvas.style.width  = (viewport.width  / dpr) + 'px';
-      canvas.style.height = (viewport.height / dpr) + 'px';
+      canvas.style.width  = (viewport.width  / dpr / sharp) + 'px';
+      canvas.style.height = (viewport.height / dpr / sharp) + 'px';
       canvas.style.display = 'inline-block';
       canvas.getContext('2d').drawImage(buf, 0, 0);
     } catch(e) {

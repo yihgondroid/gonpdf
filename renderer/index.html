@@ -104,6 +104,28 @@
 
   </div>
 
+  <div id="confirm-overlay">
+    <div id="confirm-box">
+      <div id="confirm-icon">?</div>
+      <p id="confirm-message"></p>
+      <div id="confirm-buttons">
+        <button id="confirm-yes">예(Y)</button>
+        <button id="confirm-no">아니오(N)</button>
+        <button id="confirm-cancel">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="context-menu">
+    <div class="ctx-item" id="ctx-cut">잘라내기</div>
+    <div class="ctx-item" id="ctx-copy">복사</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" id="ctx-paste-above">페이지 위로 붙여넣기</div>
+    <div class="ctx-item" id="ctx-paste-below">페이지 아래로 붙여넣기</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item ctx-danger" id="ctx-delete">페이지 삭제</div>
+  </div>
+
   <div id="fullscreen-toast">ESC 키를 누르면 돌아갑니다</div>
 
   <div id="statusbar">
@@ -120,6 +142,14 @@
   <script src="js/viewer.js"></script>
   <script src="js/editor.js"></script>
   <script src="js/automation.js"></script>
+  <script src="js/app-state.js"></script>
+  <script src="js/app-dialog.js"></script>
+  <script src="js/app-history.js"></script>
+  <script src="js/app-pdf.js"></script>
+  <script src="js/app-tabs.js"></script>
+  <script src="js/app-clipboard.js"></script>
+  <script src="js/app-auto.js"></script>
+  <script src="js/app-ui.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

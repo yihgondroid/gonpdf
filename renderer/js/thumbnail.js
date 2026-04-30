@@ -79,7 +79,7 @@ function initDragSelect(container) {
   });
 }
 
-function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder, onLabelChange) {
+function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder, onLabelChange, onCrossReorder) {
   if (!labels) labels = {};
   _selectedSets.set(container, new Set());
   _anchors.set(container, 0);
@@ -92,10 +92,28 @@ function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder, onLa
   }
 
   window.Sortable.create(container, {
+    group: 'pdf-pages',
     animation: 150,
+    onStart: function() {
+      const sel = _getSel(container);
+      container.querySelectorAll('.thumbnail-item').forEach(function(el) {
+        el.classList.toggle('dragging-selected', sel.has(Number(el.dataset.pageIndex)));
+      });
+    },
     onEnd: function(evt) {
-      if (evt.oldIndex !== evt.newIndex) {
-        onReorder(evt.oldIndex, evt.newIndex);
+      evt.from.querySelectorAll('.thumbnail-item').forEach(function(el) {
+        el.classList.remove('dragging-selected');
+      });
+      evt.to.querySelectorAll('.thumbnail-item').forEach(function(el) {
+        el.classList.remove('dragging-selected');
+      });
+
+      if (evt.from === evt.to) {
+        if (evt.oldIndex !== evt.newIndex) onReorder(evt.oldIndex, evt.newIndex);
+      } else if (onCrossReorder) {
+        const sel = Array.from(_getSel(evt.from)).sort(function(a, b) { return a - b; });
+        const indices = sel.length > 0 ? sel : [evt.oldIndex];
+        onCrossReorder(evt.from, evt.to, indices, evt.newIndex);
       }
     },
   });

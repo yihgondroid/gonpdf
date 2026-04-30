@@ -2,6 +2,9 @@
 const path = require('path');
 const fs = require('fs');
 
+let mainWin = null;
+let lastDirectory = null;
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
@@ -80,6 +83,13 @@ function createWindow() {
 
   Menu.setApplicationMenu(menu);
   win.loadFile('renderer/index.html');
+
+  win.on('close', (e) => {
+    e.preventDefault();
+    win.webContents.send('app:will-close');
+  });
+
+  mainWin = win;
 }
 
 app.whenReady().then(createWindow);
@@ -89,36 +99,75 @@ app.on('window-all-closed', () => {
 });
 
 ipcMain.handle('dialog:openFile', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog({
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWin, {
     title: 'PDF 파일 열기',
     filters: [{ name: 'PDF 파일', extensions: ['pdf'] }],
     properties: ['openFile'],
+    ...(lastDirectory ? { defaultPath: lastDirectory } : {}),
   });
   if (canceled || filePaths.length === 0) return null;
+  lastDirectory = path.dirname(filePaths[0]);
   const fileData = fs.readFileSync(filePaths[0]);
   const arrayBuffer = fileData.buffer.slice(fileData.byteOffset, fileData.byteOffset + fileData.byteLength);
   return { buffer: arrayBuffer, name: path.basename(filePaths[0]) };
 });
 
 ipcMain.handle('dialog:saveFile', async (_, { buffer, defaultName }) => {
-  const { canceled, filePath } = await dialog.showSaveDialog({
-    title: 'PDF 저장',
-    defaultPath: defaultName || 'output.pdf',
-    filters: [{ name: 'PDF 파일', extensions: ['pdf'] }],
-  });
-  if (canceled || !filePath) return false;
+  const filePath = await showSaveDialogWithPath(defaultName);
+  if (!filePath) return false;
   fs.writeFileSync(filePath, Buffer.from(buffer));
   return true;
 });
 
+async function showSaveDialogWithPath(defaultName) {
+  const defaultPath = lastDirectory
+    ? path.join(lastDirectory, defaultName || 'output.pdf')
+    : (defaultName || 'output.pdf');
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWin, {
+    title: 'PDF 저장',
+    defaultPath,
+    filters: [{ name: 'PDF 파일', extensions: ['pdf'] }],
+  });
+  if (canceled || !filePath) return null;
+  lastDirectory = path.dirname(filePath);
+  return filePath;
+}
+
+ipcMain.handle('dialog:saveFileFromClose', async (_, { buffer, defaultName }) => {
+  await new Promise(resolve => setTimeout(resolve, 150));
+  if (mainWin && !mainWin.isDestroyed()) mainWin.focus();
+  const filePath = await showSaveDialogWithPath(defaultName);
+  if (!filePath) return false;
+  fs.writeFileSync(filePath, Buffer.from(buffer));
+  return true;
+});
+
+ipcMain.handle('dialog:confirmClose', async (_, filename) => {
+  const { response } = await dialog.showMessageBox(mainWin, {
+    type: 'warning',
+    title: 'PDF 편집 툴',
+    message: `${filename}의 변경사항을 저장하시겠습니까?`,
+    buttons: ['예(Y)', '아니오(N)', '취소'],
+    defaultId: 0,
+    cancelId: 2,
+  });
+  return response;
+});
+
+ipcMain.on('app:close', () => {
+  if (mainWin) mainWin.destroy();
+});
+
 ipcMain.handle('dialog:saveFiles', async (_, files) => {
-  const { canceled, filePaths } = await dialog.showOpenDialog({
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWin, {
     title: '저장할 폴더 선택',
     properties: ['openDirectory'],
+    ...(lastDirectory ? { defaultPath: lastDirectory } : {}),
   });
   if (canceled || filePaths.length === 0) return false;
   for (const file of files) {
     fs.writeFileSync(path.join(filePaths[0], file.name), Buffer.from(file.buffer));
   }
+  lastDirectory = filePaths[0];
   return true;
 });

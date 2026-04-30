@@ -9,4 +9,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMenuSave: (cb) => ipcRenderer.on('menu:save', cb),
   onMenuUndo: (cb) => ipcRenderer.on('menu:undo', cb),
   onMenuRedo: (cb) => ipcRenderer.on('menu:redo', cb),
+  saveFileFromClose: (buffer, defaultName) => ipcRenderer.invoke('dialog:saveFileFromClose', { buffer, defaultName }),
+  confirmClose: (filename) => ipcRenderer.invoke('dialog:confirmClose', filename),
+  closeApp: () => ipcRenderer.send('app:close'),
+  onWillClose: (cb) => ipcRenderer.on('app:will-close', cb),
 });
