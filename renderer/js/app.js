@@ -21,28 +21,20 @@ $('btn-delete').addEventListener('click', async function() {
 });
 
 $('btn-merge').addEventListener('click', async function() {
-  const st   = activeState();
-  const side = activeSide;
-  const e    = sideEls(side);
   try {
-    const result = await window.electronAPI.openFile();
-    if (!result) return;
-    const { pdfLibDoc: doc2 } = await window.PdfLoader.loadPdf(result.buffer);
-    await pushHistory();
-    const merged   = await window.Editor.mergeDocuments([st.pdfLibDoc, doc2]);
+    const files = await window.electronAPI.openFiles();
+    if (!files || files.length === 0) return;
+    const ordered = await showMergeOrderDialog(files);
+    if (!ordered || ordered.length === 0) return;
+    const docs = [];
+    for (const f of ordered) {
+      const { pdfLibDoc } = await window.PdfLoader.loadPdf(f.buffer);
+      docs.push(pdfLibDoc);
+    }
+    const merged   = await window.Editor.mergeDocuments(docs);
     const newBytes = await merged.save();
-    const { pdfJsDoc, pdfLibDoc } = await window.PdfLoader.loadPdf(newBytes.buffer);
-    st.pdfJsDoc = pdfJsDoc; st.pdfLibDoc = pdfLibDoc;
-    st.currentPage = 0; st.labels = {};
-    e.thumbnailCount.textContent = pdfJsDoc.numPages + ' 페이지';
-    window.Thumbnail.renderThumbnails(pdfJsDoc, e.thumbnailList, st.labels,
-      (pi) => selectPage(side, pi),
-      (oi, ni) => handleReorder(side, oi, ni),
-      (pi, label) => { st.labels[pi] = label; },
-      handleCrossReorder);
-    await setupContinuousViewer(side);
-    selectPage(side, 0);
-    $('status-info').textContent = '합치기 완료 (' + pdfJsDoc.numPages + ' 페이지)';
+    await loadPdf(activeSide, newBytes.buffer, 'merged.pdf');
+    $('status-info').textContent = '합치기 완료 (' + merged.getPageCount() + ' 페이지)';
   } catch (err) {
     showError('합치기 실패: ' + err.message);
   }
