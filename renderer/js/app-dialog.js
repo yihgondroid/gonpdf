@@ -82,12 +82,14 @@ function showConfirmDialog(filename) {
   });
 }
 
-// PDF 병합 다이얼로그
+// PDF 합치기 다이얼로그
 // 반환: Array<{ buffer: ArrayBuffer, name: string }> 또는 null (취소)
 function showMergeOrderDialog() {
   return new Promise(function(resolve) {
     const overlay      = $('merge-overlay');
     const tbody        = $('merge-tbody');
+    const tableWrap    = $('merge-table-wrap');
+    const thead        = document.querySelector('#merge-table thead');
     const btnAddFile   = $('merge-add-file');
     const btnAddFolder = $('merge-add-folder');
     const btnDelete    = $('merge-delete-row');
@@ -97,6 +99,8 @@ function showMergeOrderDialog() {
 
     let fileList = [];
     let selectedIdx = -1;
+    let sortCol = null;   // 'name' | 'size' | 'date'
+    let sortDir = 'asc';
 
     function formatSize(bytes) {
       if (bytes == null) return '';
@@ -114,6 +118,32 @@ function showMergeOrderDialog() {
       const h = String(d.getHours()).padStart(2, '0');
       const m = String(d.getMinutes()).padStart(2, '0');
       return y + '-' + mo + '-' + day + ' ' + h + ':' + m;
+    }
+
+    function applySortToList() {
+      if (!sortCol) return;
+      const selectedFile = selectedIdx >= 0 ? fileList[selectedIdx] : null;
+      fileList.sort(function(a, b) {
+        let cmp = 0;
+        if (sortCol === 'name') cmp = a.name.localeCompare(b.name, 'ko');
+        else if (sortCol === 'size') cmp = (a.size || 0) - (b.size || 0);
+        else if (sortCol === 'date') cmp = (a.modified || '').localeCompare(b.modified || '');
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+      selectedIdx = selectedFile ? fileList.indexOf(selectedFile) : -1;
+    }
+
+    function updateSortHeaders() {
+      thead.querySelectorAll('th[data-col]').forEach(function(th) {
+        const arrow = th.querySelector('.sort-arrow');
+        if (arrow) arrow.remove();
+        if (th.dataset.col === sortCol) {
+          const span = document.createElement('span');
+          span.className = 'sort-arrow';
+          span.textContent = sortDir === 'asc' ? '▲' : '▼';
+          th.appendChild(span);
+        }
+      });
     }
 
     function renderTable() {
@@ -140,7 +170,6 @@ function showMergeOrderDialog() {
         tdDate.textContent = formatDate(file.modified);
 
         const tdStatus = document.createElement('td');
-        tdStatus.className = 'merge-td-status';
         const span = document.createElement('span');
         span.className = 'merge-status-waiting';
         span.textContent = '대기중';
@@ -156,12 +185,15 @@ function showMergeOrderDialog() {
 
       btnConfirm.disabled = fileList.length === 0;
       btnDelete.disabled = selectedIdx < 0;
+      updateSortHeaders();
     }
 
+    // 행 드래그 순서 조정 (정렬 중에는 비활성)
     const sortable = new Sortable(tbody, {
       animation: 150,
       onEnd: function(evt) {
         if (evt.oldIndex === evt.newIndex) return;
+        sortCol = null;  // 수동 정렬 시 컬럼 정렬 해제
         const moved = fileList.splice(evt.oldIndex, 1)[0];
         fileList.splice(evt.newIndex, 0, moved);
         if (selectedIdx === evt.oldIndex) selectedIdx = evt.newIndex;
@@ -171,11 +203,49 @@ function showMergeOrderDialog() {
       },
     });
 
+    // 헤더 클릭 → 컬럼 정렬
+    function onTheadClick(e) {
+      const th = e.target.closest('th[data-col]');
+      if (!th) return;
+      const col = th.dataset.col;
+      if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      else { sortCol = col; sortDir = 'asc'; }
+      applySortToList();
+      renderTable();
+    }
+
+    // 행 클릭 → 선택
     function onRowClick(e) {
       const tr = e.target.closest('tr');
       if (!tr) return;
       const idx = parseInt(tr.dataset.idx, 10);
       selectedIdx = (selectedIdx === idx) ? -1 : idx;
+      renderTable();
+    }
+
+    // OS 파일 드래그 드롭
+    function onDragOver(e) {
+      if (!e.dataTransfer.types.includes('Files')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      tableWrap.classList.add('drag-over');
+    }
+    function onDragLeave(e) {
+      if (!tableWrap.contains(e.relatedTarget)) tableWrap.classList.remove('drag-over');
+    }
+    async function onDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      tableWrap.classList.remove('drag-over');
+      const droppedFiles = Array.from(e.dataTransfer.files).filter(function(f) {
+        return f.name.toLowerCase().endsWith('.pdf');
+      });
+      if (droppedFiles.length === 0) return;
+      const added = await Promise.all(droppedFiles.map(async function(f) {
+        const buffer = await f.arrayBuffer();
+        return { buffer, name: f.name, size: f.size, modified: new Date(f.lastModified).toISOString() };
+      }));
+      fileList = fileList.concat(added);
       renderTable();
     }
 
@@ -211,9 +281,14 @@ function showMergeOrderDialog() {
       overlay.classList.remove('visible');
       sortable.destroy();
       tbody.innerHTML = '';
+      tableWrap.classList.remove('drag-over');
       fileList = [];
       selectedIdx = -1;
+      thead.removeEventListener('click', onTheadClick);
       tbody.removeEventListener('click', onRowClick);
+      tableWrap.removeEventListener('dragover', onDragOver);
+      tableWrap.removeEventListener('dragleave', onDragLeave);
+      tableWrap.removeEventListener('drop', onDrop);
       btnAddFile.removeEventListener('click', onAddFile);
       btnAddFolder.removeEventListener('click', onAddFolder);
       btnDelete.removeEventListener('click', onDeleteRow);
@@ -227,7 +302,11 @@ function showMergeOrderDialog() {
     renderTable();
     overlay.classList.add('visible');
 
+    thead.addEventListener('click', onTheadClick);
     tbody.addEventListener('click', onRowClick);
+    tableWrap.addEventListener('dragover', onDragOver);
+    tableWrap.addEventListener('dragleave', onDragLeave);
+    tableWrap.addEventListener('drop', onDrop);
     btnAddFile.addEventListener('click', onAddFile);
     btnAddFolder.addEventListener('click', onAddFolder);
     btnDelete.addEventListener('click', onDeleteRow);

@@ -683,3 +683,7 @@ body.fullscreen-mode #panel-resizer-right { display: none !important; }
 #merge-confirm { background: #b8d4e8; border-color: #8ab4d4; font-weight: 500; }
 #merge-confirm:hover { background: #9ac4dc; }
 #merge-confirm:disabled { background: #d8e4ee; color: #aab; cursor: not-allowed; }
+#merge-table thead th[data-col] { cursor: pointer; }
+#merge-table thead th[data-col]:hover { background: #e0e8f0; }
+#merge-table thead th .sort-arrow { margin-left: 4px; font-size: 10px; color: #6688aa; }
+#merge-table-wrap.drag-over { background: #e8f4ff; outline: 2px dashed #6aabdc; outline-offset: -3px; }

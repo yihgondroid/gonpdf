@@ -119,7 +119,7 @@
   <div id="merge-overlay">
     <div id="merge-box">
       <div id="merge-titlebar">
-        <span id="merge-titlebar-text">PDF 병합</span>
+        <span id="merge-titlebar-text">PDF 합치기</span>
         <button id="merge-close-x">✕</button>
       </div>
       <div id="merge-toolbar">
@@ -138,10 +138,10 @@
           </colgroup>
           <thead>
             <tr>
-              <th>이름</th>
-              <th>크기</th>
+              <th data-col="name">이름</th>
+              <th data-col="size">크기</th>
               <th>종류</th>
-              <th>수정한 날짜</th>
+              <th data-col="date">수정한 날짜</th>
               <th>진행상태</th>
             </tr>
           </thead>
@@ -149,7 +149,7 @@
         </table>
       </div>
       <div id="merge-footer">
-        <button id="merge-confirm" disabled>PDF 병합</button>
+        <button id="merge-confirm" disabled>PDF 합치기</button>
         <button id="merge-cancel">닫기</button>
       </div>
     </div>
