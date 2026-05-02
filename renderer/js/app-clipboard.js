@@ -143,6 +143,82 @@ async function pastePagesSide(side, targetPageIndex, position) {
   }
 }
 
+async function saveAndDeletePagesSide(side) {
+  const st = sideState(side);
+  if (!st.pdfLibDoc) return;
+  const e = sideEls(side);
+  const indices = window.Thumbnail.getSelectedIndices(e.thumbnailList);
+  if (indices.length === 0) return;
+  if (indices.length >= st.pdfJsDoc.numPages) {
+    showError('모든 페이지를 삭제할 수 없습니다.');
+    return;
+  }
+
+  try {
+    const saveDoc = await PDFLib.PDFDocument.create();
+    const copied = await saveDoc.copyPages(st.pdfLibDoc, indices);
+    copied.forEach(function(p) { saveDoc.addPage(p); });
+    const bytes = await saveDoc.save();
+
+    const base = st.filename ? st.filename.replace(/\.pdf$/i, '') : 'extracted';
+    const pageRange = indices.length === 1
+      ? 'p' + (indices[0] + 1)
+      : 'p' + (indices[0] + 1) + '-' + (indices[indices.length - 1] + 1);
+    const saved = await window.electronAPI.saveFile(bytes, base + '_' + pageRange + '.pdf');
+    if (!saved) return;
+
+    const prevActive = activeSide;
+    activeSide = side;
+    await pushHistory();
+    activeSide = prevActive;
+
+    const removedSet = new Set(indices);
+    const pages = st.pdfLibDoc.getPages();
+    const remaining = pages.filter(function(_, i) { return !removedSet.has(i); });
+    for (let i = pages.length - 1; i >= 0; i--) st.pdfLibDoc.removePage(i);
+    remaining.forEach(function(p) { st.pdfLibDoc.addPage(p); });
+
+    const newLabels = {};
+    let shift = 0;
+    for (let i = 0; i < pages.length; i++) {
+      if (removedSet.has(i)) { shift++; continue; }
+      if (st.labels[i] !== undefined) newLabels[i - shift] = st.labels[i];
+    }
+    st.labels = newLabels;
+
+    await reloadSide(side);
+    $('status-info').textContent = indices.length + '페이지 저장 후 삭제 완료';
+  } catch (err) {
+    showError('삭제 후 저장 실패: ' + err.message);
+  }
+}
+
+async function saveAndKeepPagesSide(side) {
+  const st = sideState(side);
+  if (!st.pdfLibDoc) return;
+  const e = sideEls(side);
+  const indices = window.Thumbnail.getSelectedIndices(e.thumbnailList);
+  if (indices.length === 0) return;
+
+  try {
+    const saveDoc = await PDFLib.PDFDocument.create();
+    const copied = await saveDoc.copyPages(st.pdfLibDoc, indices);
+    copied.forEach(function(p) { saveDoc.addPage(p); });
+    const bytes = await saveDoc.save();
+
+    const base = st.filename ? st.filename.replace(/\.pdf$/i, '') : 'extracted';
+    const pageRange = indices.length === 1
+      ? 'p' + (indices[0] + 1)
+      : 'p' + (indices[0] + 1) + '-' + (indices[indices.length - 1] + 1);
+    const saved = await window.electronAPI.saveFile(bytes, base + '_' + pageRange + '.pdf');
+    if (!saved) return;
+
+    $('status-info').textContent = indices.length + '페이지 저장 완료';
+  } catch (err) {
+    showError('보존 후 저장 실패: ' + err.message);
+  }
+}
+
 function showContextMenu(e, side, pageIndex) {
   e.preventDefault();
   _ctxSide = side;
@@ -204,6 +280,14 @@ $('ctx-paste-below').addEventListener('click', function() {
 $('ctx-delete').addEventListener('click', function() {
   hideContextMenu();
   deletePagesSide(_ctxSide);
+});
+$('ctx-save-delete').addEventListener('click', function() {
+  hideContextMenu();
+  saveAndDeletePagesSide(_ctxSide);
+});
+$('ctx-save-keep').addEventListener('click', function() {
+  hideContextMenu();
+  saveAndKeepPagesSide(_ctxSide);
 });
 document.addEventListener('click', function(e) {
   if (!e.target.closest('#context-menu')) hideContextMenu();
