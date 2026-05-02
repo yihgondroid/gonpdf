@@ -621,7 +621,7 @@ body.fullscreen-mode #panel-resizer-right { display: none !important; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'Malgun Gothic', monospace;
+  font-family: 'Malgun Gothic', sans-serif;
 }
 .merge-remove {
   background: none;
