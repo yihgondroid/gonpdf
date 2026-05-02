@@ -150,6 +150,12 @@ function showMergeOrderDialog(files) {
       return result;
     }
 
+    function onConfirm() { cleanup(getOrderedFiles()); }
+    function onCancel()  { cleanup(null); }
+    function onKey(ev) {
+      if (ev.key === 'Escape') { ev.preventDefault(); cleanup(null); }
+    }
+
     function cleanup(result) {
       overlay.classList.remove('visible');
       sortable.destroy();
@@ -159,12 +165,6 @@ function showMergeOrderDialog(files) {
       btnCancel.removeEventListener('click', onCancel);
       document.removeEventListener('keydown', onKey);
       resolve(result);
-    }
-
-    function onConfirm() { cleanup(getOrderedFiles()); }
-    function onCancel()  { cleanup(null); }
-    function onKey(ev) {
-      if (ev.key === 'Escape') { ev.preventDefault(); cleanup(null); }
     }
 
     btnConfirm.addEventListener('click', onConfirm);
