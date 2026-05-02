@@ -20,6 +20,8 @@ window.Viewer = (function() {
       canvas.style.height = (viewport.height / dpr / sharp) + 'px';
       canvas.style.display = 'inline-block';
       canvas.getContext('2d').drawImage(buf, 0, 0);
+      // 부모 div의 minHeight를 캔버스 실제 높이로 동기화
+      if (canvas.parentElement) canvas.parentElement.style.minHeight = canvas.style.height;
     } catch(e) {
       if (e && e.name !== 'RenderingCancelledException') console.error('render:', e);
     }
@@ -86,7 +88,24 @@ window.Viewer = (function() {
   }
 
   function rerenderAllPages(wrap, pdfJsDoc, scale) {
+    var prevScale = wrap._currentScale || scale;
     wrap._currentScale = scale;
+
+    // 스케일 변경 시 모든 페이지의 크기를 비율에 맞게 즉시 조정 (간격 일정 유지)
+    if (prevScale > 0 && prevScale !== scale) {
+      var ratio = scale / prevScale;
+      wrap.querySelectorAll('.pdf-page').forEach(function(pageDiv) {
+        var mh = parseFloat(pageDiv.style.minHeight);
+        if (mh > 0) pageDiv.style.minHeight = Math.round(mh * ratio) + 'px';
+        var c = pageDiv.querySelector('.pdf-page-canvas');
+        if (c) {
+          var h = parseFloat(c.style.height), w = parseFloat(c.style.width);
+          if (h > 0) c.style.height = Math.round(h * ratio) + 'px';
+          if (w > 0) c.style.width  = Math.round(w * ratio) + 'px';
+        }
+      });
+    }
+
     wrap.querySelectorAll('.pdf-page').forEach(function(pageDiv) {
       pageDiv._rendered = false;
     });
