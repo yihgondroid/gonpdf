@@ -41,6 +41,12 @@ function renderTabBar(side) {
 }
 
 async function switchTab(side, idx) {
+  // 현재 탭의 스크롤 위치 저장
+  const prevTab = sideState(side);
+  if (prevTab && prevTab.pdfJsDoc) {
+    prevTab.scrollTop = sideEls(side).viewerCanvasWrap.scrollTop;
+  }
+
   if (side === 'left') activeTabL = idx;
   else activeTabR = idx;
 
@@ -68,7 +74,13 @@ async function switchTab(side, idx) {
     (pi, label) => { tab.labels[pi] = label; },
     handleCrossReorder);
   await setupContinuousViewer(side);
-  selectPage(side, tab.currentPage);
+  if (tab.scrollTop > 0) {
+    e.viewerCanvasWrap.scrollTop = tab.scrollTop;
+    window.Viewer.updatePageInfo(e.pageInfo, tab.currentPage, window.PdfLoader.getPageCount(tab.pdfJsDoc));
+    window.Thumbnail.setSelected(e.thumbnailList, tab.currentPage);
+  } else {
+    selectPage(side, tab.currentPage);
+  }
   if (side === activeSide || !splitMode) {
     enableButtons(true, !!tab.classified);
   }

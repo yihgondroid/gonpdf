@@ -4,8 +4,19 @@ function createTab() {
   return {
     pdfJsDoc: null, pdfLibDoc: null, currentPage: 0,
     scale: 1.0, labels: {}, filename: '', undoStack: [], redoStack: [], dirty: false,
-    classified: false
+    classified: false, scrollTop: 0
   };
+}
+
+// 페이지 제거 후 레이블 인덱스 재매핑
+function remapLabelsAfterRemove(labels, removedSet, totalPages) {
+  const newLabels = {};
+  let shift = 0;
+  for (let i = 0; i < totalPages; i++) {
+    if (removedSet.has(i)) { shift++; continue; }
+    if (labels[i] !== undefined) newLabels[i - shift] = labels[i];
+  }
+  return newLabels;
 }
 
 const tabsL = [createTab()];

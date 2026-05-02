@@ -1,11 +1,14 @@
 // 히스토리 (실행취소 / 다시실행)
 
+const MAX_HISTORY = 20;
+
 async function pushHistory() {
   const st = activeState();
   if (!st.pdfLibDoc) return;
   try {
     const bytes = await st.pdfLibDoc.save();
     activeUndo().push(bytes);
+    if (activeUndo().length > MAX_HISTORY) activeUndo().shift();
     activeRedo().length = 0;
     st.dirty = true;
     renderTabBar(activeSide);

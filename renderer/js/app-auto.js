@@ -1,4 +1,4 @@
-// 자동분류 & 자동화
+﻿// 자동분류 & 자동화
 
 function saveDoc(doc, defaultName) {
   return doc.save().then(function(bytes) {
@@ -22,7 +22,7 @@ $('btn-auto-classify').addEventListener('click', async function() {
   $('status-info').textContent = '자동분류 중...';
 
   const ANSWER_KEYWORDS   = ['정답', '해설', '풀이', '답', '따라서', '이므로', '므로', '에 의하여'];
-  const QUESTION_KEYWORDS = ['구하시오', '\\?'];
+  const QUESTION_KEYWORDS = ['구하시오', '[?？]'];
   const pageCount = st.pdfJsDoc.numPages;
 
   try {

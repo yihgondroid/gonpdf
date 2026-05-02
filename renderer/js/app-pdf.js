@@ -192,13 +192,7 @@ async function handleCrossReorder(fromContainer, toContainer, indices, toIndex) 
     for (let i = srcPages.length - 1; i >= 0; i--) srcSt.pdfLibDoc.removePage(i);
     remaining.forEach(function(p) { srcSt.pdfLibDoc.addPage(p); });
 
-    const newSrcLabels = {};
-    let shift = 0;
-    for (let i = 0; i < srcPages.length; i++) {
-      if (removedSet.has(i)) { shift++; continue; }
-      if (srcSt.labels[i] !== undefined) newSrcLabels[i - shift] = srcSt.labels[i];
-    }
-    srcSt.labels = newSrcLabels;
+    srcSt.labels = remapLabelsAfterRemove(srcSt.labels, removedSet, srcPages.length);
 
     const dstPages = dstSt.pdfLibDoc.getPages();
     const count    = copiedPages.length;

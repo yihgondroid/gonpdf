@@ -34,9 +34,17 @@ async function imageToPdfBuffer(buffer) {
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
     canvas.getContext('2d').drawImage(img, 0, 0);
-    const pngBuf = await new Promise(function(resolve) {
-      canvas.toBlob(function(b) { b.arrayBuffer().then(resolve); }, 'image/png');
-    });
+    const pngBuf = await Promise.race([
+      new Promise(function(resolve, reject) {
+        canvas.toBlob(function(b) {
+          if (!b) { reject(new Error('이미지 변환 실패')); return; }
+          b.arrayBuffer().then(resolve, reject);
+        }, 'image/png');
+      }),
+      new Promise(function(_, reject) {
+        setTimeout(function() { reject(new Error('이미지 변환 시간 초과')); }, 10000);
+      }),
+    ]);
     const pdfDoc = await PDFLib.PDFDocument.create();
     const pngImg = await pdfDoc.embedPng(pngBuf);
     const page = pdfDoc.addPage([pngImg.width, pngImg.height]);

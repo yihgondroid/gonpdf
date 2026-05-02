@@ -32,13 +32,7 @@ async function cutPagesSide(side) {
     for (let i = pages.length - 1; i >= 0; i--) st.pdfLibDoc.removePage(i);
     remaining.forEach(function(p) { st.pdfLibDoc.addPage(p); });
 
-    const newLabels = {};
-    let shift = 0;
-    for (let i = 0; i < pages.length; i++) {
-      if (removedSet.has(i)) { shift++; continue; }
-      if (st.labels[i] !== undefined) newLabels[i - shift] = st.labels[i];
-    }
-    st.labels = newLabels;
+    st.labels = remapLabelsAfterRemove(st.labels, removedSet, pages.length);
 
     await reloadSide(side);
     $('status-info').textContent = indices.length + '페이지 잘라냄';
@@ -70,13 +64,7 @@ async function deletePagesSide(side) {
     for (let i = pages.length - 1; i >= 0; i--) st.pdfLibDoc.removePage(i);
     remaining.forEach(function(p) { st.pdfLibDoc.addPage(p); });
 
-    const newLabels = {};
-    let shift = 0;
-    for (let i = 0; i < pages.length; i++) {
-      if (removedSet.has(i)) { shift++; continue; }
-      if (st.labels[i] !== undefined) newLabels[i - shift] = st.labels[i];
-    }
-    st.labels = newLabels;
+    st.labels = remapLabelsAfterRemove(st.labels, removedSet, pages.length);
 
     await reloadSide(side);
     $('status-info').textContent = indices.length + '페이지 삭제됨';
@@ -178,13 +166,7 @@ async function saveAndDeletePagesSide(side) {
     for (let i = pages.length - 1; i >= 0; i--) st.pdfLibDoc.removePage(i);
     remaining.forEach(function(p) { st.pdfLibDoc.addPage(p); });
 
-    const newLabels = {};
-    let shift = 0;
-    for (let i = 0; i < pages.length; i++) {
-      if (removedSet.has(i)) { shift++; continue; }
-      if (st.labels[i] !== undefined) newLabels[i - shift] = st.labels[i];
-    }
-    st.labels = newLabels;
+    st.labels = remapLabelsAfterRemove(st.labels, removedSet, pages.length);
 
     await reloadSide(side);
     $('status-info').textContent = indices.length + '페이지 저장 후 삭제 완료';
