@@ -28,7 +28,8 @@ $('btn-merge').addEventListener('click', async function() {
     if (!ordered || ordered.length === 0) return;
     const docs = [];
     for (const f of ordered) {
-      const { pdfLibDoc } = await window.PdfLoader.loadPdf(f.buffer);
+      const { pdfJsDoc: tmpDoc, pdfLibDoc } = await window.PdfLoader.loadPdf(f.buffer);
+      tmpDoc.destroy();
       docs.push(pdfLibDoc);
     }
     const merged   = await window.Editor.mergeDocuments(docs);
