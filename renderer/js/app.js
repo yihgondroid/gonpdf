@@ -21,6 +21,7 @@ $('btn-delete').addEventListener('click', async function() {
 });
 
 $('btn-merge').addEventListener('click', async function() {
+  const targetSide = activeSide;
   try {
     const files = await window.electronAPI.openFiles();
     if (!files || files.length === 0) return;
@@ -34,7 +35,7 @@ $('btn-merge').addEventListener('click', async function() {
     }
     const merged   = await window.Editor.mergeDocuments(docs);
     const newBytes = await merged.save();
-    await loadPdf(activeSide, newBytes.buffer, 'merged.pdf');
+    await loadPdf(targetSide, newBytes.buffer, 'merged.pdf');
     $('status-info').textContent = '합치기 완료 (' + merged.getPageCount() + ' 페이지)';
   } catch (err) {
     showError('합치기 실패: ' + err.message);
