@@ -82,93 +82,158 @@ function showConfirmDialog(filename) {
   });
 }
 
-// 합치기 순서 조정 모달
-// files: Array<{ buffer: ArrayBuffer, name: string }>
-// 반환: 사용자가 정렬한 Array<{ buffer, name }> 또는 null (취소)
-function showMergeOrderDialog(files) {
+// PDF 병합 다이얼로그
+// 반환: Array<{ buffer: ArrayBuffer, name: string }> 또는 null (취소)
+function showMergeOrderDialog() {
   return new Promise(function(resolve) {
-    const overlay   = $('merge-overlay');
-    const listEl    = $('merge-list');
-    const btnConfirm = $('merge-confirm');
-    const btnCancel  = $('merge-cancel');
+    const overlay      = $('merge-overlay');
+    const tbody        = $('merge-tbody');
+    const btnAddFile   = $('merge-add-file');
+    const btnAddFolder = $('merge-add-folder');
+    const btnDelete    = $('merge-delete-row');
+    const btnConfirm   = $('merge-confirm');
+    const btnCancel    = $('merge-cancel');
+    const btnCloseX    = $('merge-close-x');
 
-    // 파일 목록 렌더링 (data-idx로 원본 배열 인덱스 추적)
-    listEl.innerHTML = '';
-    files.forEach(function(file, idx) {
-      const item = document.createElement('div');
-      item.className = 'merge-item';
-      item.dataset.idx = String(idx);
+    let fileList = [];
+    let selectedIdx = -1;
 
-      const handle = document.createElement('span');
-      handle.className = 'merge-drag-handle';
-      handle.textContent = '⠿';
-
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'merge-filename';
-      nameSpan.textContent = file.name;
-      nameSpan.title = file.name;
-
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'merge-remove';
-      removeBtn.textContent = '✕';
-      removeBtn.title = '목록에서 제거';
-
-      item.appendChild(handle);
-      item.appendChild(nameSpan);
-      item.appendChild(removeBtn);
-      listEl.appendChild(item);
-    });
-
-    function updateConfirmState() {
-      btnConfirm.disabled = listEl.children.length < 1;
-    }
-    updateConfirmState();
-
-    // SortableJS 초기화
-    const sortable = new Sortable(listEl, {
-      animation: 150,
-      handle: '.merge-drag-handle',
-    });
-
-    // 항목 제거
-    listEl.addEventListener('click', onRemoveClick);
-    function onRemoveClick(e) {
-      if (e.target.classList.contains('merge-remove')) {
-        e.target.closest('.merge-item').remove();
-        updateConfirmState();
-      }
+    function formatSize(bytes) {
+      if (bytes == null) return '';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
-    overlay.classList.add('visible');
+    function formatDate(isoStr) {
+      if (!isoStr) return '';
+      const d = new Date(isoStr);
+      const y = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const h = String(d.getHours()).padStart(2, '0');
+      const m = String(d.getMinutes()).padStart(2, '0');
+      return y + '-' + mo + '-' + day + ' ' + h + ':' + m;
+    }
 
-    function getOrderedFiles() {
-      const items = listEl.querySelectorAll('.merge-item');
-      const result = [];
-      items.forEach(function(item) {
-        result.push(files[parseInt(item.dataset.idx, 10)]);
+    function renderTable() {
+      tbody.innerHTML = '';
+      fileList.forEach(function(file, idx) {
+        const tr = document.createElement('tr');
+        if (idx === selectedIdx) tr.classList.add('selected');
+        tr.dataset.idx = String(idx);
+
+        const tdName = document.createElement('td');
+        tdName.textContent = file.name;
+        tdName.title = file.name;
+
+        const tdSize = document.createElement('td');
+        tdSize.className = 'merge-td-size';
+        tdSize.textContent = formatSize(file.size);
+
+        const tdType = document.createElement('td');
+        tdType.className = 'merge-td-type';
+        tdType.textContent = 'PDF 파일';
+
+        const tdDate = document.createElement('td');
+        tdDate.className = 'merge-td-date';
+        tdDate.textContent = formatDate(file.modified);
+
+        const tdStatus = document.createElement('td');
+        tdStatus.className = 'merge-td-status';
+        const span = document.createElement('span');
+        span.className = 'merge-status-waiting';
+        span.textContent = '대기중';
+        tdStatus.appendChild(span);
+
+        tr.appendChild(tdName);
+        tr.appendChild(tdSize);
+        tr.appendChild(tdType);
+        tr.appendChild(tdDate);
+        tr.appendChild(tdStatus);
+        tbody.appendChild(tr);
       });
-      return result;
+
+      btnConfirm.disabled = fileList.length === 0;
+      btnDelete.disabled = selectedIdx < 0;
     }
 
-    function onConfirm() { cleanup(getOrderedFiles()); }
+    const sortable = new Sortable(tbody, {
+      animation: 150,
+      onEnd: function(evt) {
+        if (evt.oldIndex === evt.newIndex) return;
+        const moved = fileList.splice(evt.oldIndex, 1)[0];
+        fileList.splice(evt.newIndex, 0, moved);
+        if (selectedIdx === evt.oldIndex) selectedIdx = evt.newIndex;
+        else if (selectedIdx > evt.oldIndex && selectedIdx <= evt.newIndex) selectedIdx--;
+        else if (selectedIdx < evt.oldIndex && selectedIdx >= evt.newIndex) selectedIdx++;
+        renderTable();
+      },
+    });
+
+    function onRowClick(e) {
+      const tr = e.target.closest('tr');
+      if (!tr) return;
+      const idx = parseInt(tr.dataset.idx, 10);
+      selectedIdx = (selectedIdx === idx) ? -1 : idx;
+      renderTable();
+    }
+
+    async function onAddFile() {
+      const added = await window.electronAPI.openFiles();
+      if (!added || added.length === 0) return;
+      fileList = fileList.concat(added);
+      renderTable();
+    }
+
+    async function onAddFolder() {
+      const added = await window.electronAPI.openFolder();
+      if (!added || added.length === 0) return;
+      fileList = fileList.concat(added);
+      renderTable();
+    }
+
+    function onDeleteRow() {
+      if (selectedIdx < 0 || selectedIdx >= fileList.length) return;
+      fileList.splice(selectedIdx, 1);
+      selectedIdx = fileList.length === 0 ? -1 : Math.min(selectedIdx, fileList.length - 1);
+      renderTable();
+    }
+
+    function onConfirm() { cleanup(fileList.slice()); }
     function onCancel()  { cleanup(null); }
     function onKey(ev) {
       if (ev.key === 'Escape') { ev.preventDefault(); cleanup(null); }
+      if (ev.key === 'Delete' && selectedIdx >= 0) { ev.preventDefault(); onDeleteRow(); }
     }
 
     function cleanup(result) {
       overlay.classList.remove('visible');
       sortable.destroy();
-      listEl.innerHTML = '';
-      listEl.removeEventListener('click', onRemoveClick);
+      tbody.innerHTML = '';
+      fileList = [];
+      selectedIdx = -1;
+      tbody.removeEventListener('click', onRowClick);
+      btnAddFile.removeEventListener('click', onAddFile);
+      btnAddFolder.removeEventListener('click', onAddFolder);
+      btnDelete.removeEventListener('click', onDeleteRow);
       btnConfirm.removeEventListener('click', onConfirm);
       btnCancel.removeEventListener('click', onCancel);
+      btnCloseX.removeEventListener('click', onCancel);
       document.removeEventListener('keydown', onKey);
       resolve(result);
     }
 
+    renderTable();
+    overlay.classList.add('visible');
+
+    tbody.addEventListener('click', onRowClick);
+    btnAddFile.addEventListener('click', onAddFile);
+    btnAddFolder.addEventListener('click', onAddFolder);
+    btnDelete.addEventListener('click', onDeleteRow);
     btnConfirm.addEventListener('click', onConfirm);
     btnCancel.addEventListener('click', onCancel);
+    btnCloseX.addEventListener('click', onCancel);
     document.addEventListener('keydown', onKey);
   });
 }

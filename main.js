@@ -183,7 +183,28 @@ ipcMain.handle('dialog:openFiles', async () => {
   lastDirectory = path.dirname(filePaths[0]);
   return filePaths.map(function(fp) {
     const fileData = fs.readFileSync(fp);
+    const stat = fs.statSync(fp);
     const arrayBuffer = fileData.buffer.slice(fileData.byteOffset, fileData.byteOffset + fileData.byteLength);
-    return { buffer: arrayBuffer, name: path.basename(fp) };
+    return { buffer: arrayBuffer, name: path.basename(fp), size: stat.size, modified: stat.mtime.toISOString() };
+  });
+});
+
+ipcMain.handle('dialog:openFolder', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWin, {
+    title: '폴더 선택',
+    properties: ['openDirectory'],
+    ...(lastDirectory ? { defaultPath: lastDirectory } : {}),
+  });
+  if (canceled || filePaths.length === 0) return null;
+  const folderPath = filePaths[0];
+  lastDirectory = folderPath;
+  const entries = fs.readdirSync(folderPath);
+  const pdfNames = entries.filter(function(e) { return e.toLowerCase().endsWith('.pdf'); }).sort();
+  return pdfNames.map(function(name) {
+    const fp = path.join(folderPath, name);
+    const fileData = fs.readFileSync(fp);
+    const stat = fs.statSync(fp);
+    const arrayBuffer = fileData.buffer.slice(fileData.byteOffset, fileData.byteOffset + fileData.byteLength);
+    return { buffer: arrayBuffer, name, size: stat.size, modified: stat.mtime.toISOString() };
   });
 });

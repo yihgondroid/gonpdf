@@ -23,9 +23,7 @@ $('btn-delete').addEventListener('click', async function() {
 $('btn-merge').addEventListener('click', async function() {
   const targetSide = activeSide;
   try {
-    const files = await window.electronAPI.openFiles();
-    if (!files || files.length === 0) return;
-    const ordered = await showMergeOrderDialog(files);
+    const ordered = await showMergeOrderDialog();
     if (!ordered || ordered.length === 0) return;
     const docs = [];
     for (const f of ordered) {
