@@ -71,26 +71,6 @@ $('btn-merge').addEventListener('click', async function() {
   }
 });
 
-$('btn-split').addEventListener('click', async function() {
-  const st = activeState();
-  if (!st.pdfLibDoc) return;
-  const total = st.pdfJsDoc.numPages;
-  const input = prompt('나누기: 시작-끝 페이지 입력 (예: 1-3, 전체 ' + total + '페이지)');
-  if (!input) return;
-  const parts = input.split('-');
-  const start = parseInt(parts[0], 10) - 1;
-  const count = parseInt(parts[1], 10) - start;
-  if (isNaN(start) || isNaN(count) || count <= 0) return;
-  try {
-    const splitDoc = await window.Editor.splitDocument(st.pdfLibDoc, start, count);
-    const bytes = await splitDoc.save();
-    await window.electronAPI.saveFile(bytes, 'split_p' + (start + 1) + '-' + (start + count) + '.pdf');
-    $('status-info').textContent = '나누기 저장 완료 (' + count + ' 페이지)';
-  } catch (err) {
-    showError('나누기 실패: ' + err.message);
-  }
-});
-
 // 앱 종료 처리
 window.electronAPI.onWillClose(async function() {
   const allTabs = [

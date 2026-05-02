@@ -98,9 +98,14 @@ function bindResizer(resizerId, panelId, direction) {
     panel.style.width = newWidth + 'px';
   });
   document.addEventListener('mouseup', function() {
+    const wasDragging = resizer.classList.contains('dragging');
     resizer.classList.remove('dragging');
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
+    if (wasDragging) {
+      fitViewerToWidth('left');
+      if (splitMode) fitViewerToWidth('right');
+    }
   });
 }
 
@@ -192,6 +197,16 @@ function getDropSide(target) {
   const rThumb = document.getElementById('thumbnail-panel-right');
   return (rPanel.contains(target) || rThumb.contains(target)) ? 'right' : 'left';
 }
+
+// 창 크기 변경 시 뷰어 너비 맞춤
+let _winResizeTimer;
+window.addEventListener('resize', function() {
+  clearTimeout(_winResizeTimer);
+  _winResizeTimer = setTimeout(function() {
+    fitViewerToWidth('left');
+    if (splitMode) fitViewerToWidth('right');
+  }, 150);
+});
 
 let _dropHighlight = null;
 document.addEventListener('dragover', function(e) {

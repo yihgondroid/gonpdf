@@ -43,7 +43,7 @@ function sideEls(side) {
 }
 
 function enableButtons(hasFile, classified) {
-  ['btn-delete', 'btn-split', 'btn-auto-classify']
+  ['btn-delete', 'btn-auto-classify']
     .forEach(function(id) { $(id).disabled = !hasFile; });
   ['btn-auto-split','btn-auto-left','btn-auto-right','btn-auto-answer','btn-auto-all']
     .forEach(function(id) { $(id).disabled = !hasFile || !classified; });

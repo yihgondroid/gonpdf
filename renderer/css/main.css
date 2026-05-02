@@ -37,7 +37,7 @@ body {
 #toolbar button:not(:disabled):hover { filter: brightness(0.92); }
 
 #btn-open, #btn-save { background: #b8d4e8; }
-#btn-delete, #btn-merge, #btn-split { background: #c8e0d0; }
+#btn-delete, #btn-merge { background: #c8e0d0; }
 #btn-auto-classify, #btn-auto-split,
 #btn-auto-left, #btn-auto-right,
 #btn-auto-answer, #btn-auto-all { background: #d0c8e4; }

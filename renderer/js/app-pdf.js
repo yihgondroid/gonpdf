@@ -1,5 +1,25 @@
 // PDF 로드 / 저장 / 렌더링
 
+async function fitViewerToWidth(side) {
+  const st = sideState(side);
+  if (!st.pdfJsDoc) return;
+  const e = sideEls(side);
+  try {
+    const page = await st.pdfJsDoc.getPage(1);
+    const naturalW = page.getViewport({ scale: 1.0 }).width;
+    const availW = e.viewerCanvasWrap.clientWidth - 32;
+    if (availW <= 0 || naturalW <= 0) return;
+    const newScale = availW / naturalW;
+    st.scale = newScale;
+    e.zoomSlider.value = Math.max(50, Math.min(400, Math.round(newScale * 100)));
+    window.Viewer.updateZoomInfo(e.zoomInfo, newScale);
+    clearTimeout(st._zoomTimer);
+    st._zoomTimer = setTimeout(function() {
+      window.Viewer.rerenderAllPages(e.viewerCanvasWrap, st.pdfJsDoc, newScale);
+    }, 120);
+  } catch (_) {}
+}
+
 async function setupContinuousViewer(side) {
   const st = sideState(side);
   const e  = sideEls(side);
@@ -43,6 +63,18 @@ async function loadPdf(side, buffer, name) {
     tab.redoStack.length = 0;
     tab.dirty            = false;
     tab.classified       = false;
+
+    // 뷰어 너비에 맞춰 초기 스케일 결정
+    try {
+      const firstPage = await pdfJsDoc.getPage(1);
+      const naturalW = firstPage.getViewport({ scale: 1.0 }).width;
+      const availW = e.viewerCanvasWrap.clientWidth - 32;
+      if (availW > 0 && naturalW > 0) {
+        tab.scale = availW / naturalW;
+        e.zoomSlider.value = Math.max(50, Math.min(400, Math.round(tab.scale * 100)));
+        window.Viewer.updateZoomInfo(e.zoomInfo, tab.scale);
+      }
+    } catch (_) {}
 
     $('status-filename').textContent = name;
     const placeholder = $('viewer-placeholder-' + side);
