@@ -174,8 +174,12 @@ ipcMain.handle('dialog:saveFiles', async (_, files) => {
 
 ipcMain.handle('dialog:openFiles', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWin, {
-    title: 'PDF 파일 열기',
-    filters: [{ name: 'PDF 파일', extensions: ['pdf'] }],
+    title: 'PDF 및 이미지 파일 열기',
+    filters: [
+      { name: 'PDF 및 이미지', extensions: ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'tif'] },
+      { name: 'PDF 파일', extensions: ['pdf'] },
+      { name: '이미지 파일', extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'tif'] },
+    ],
     properties: ['openFile', 'multiSelections'],
     ...(lastDirectory ? { defaultPath: lastDirectory } : {}),
   });
@@ -198,8 +202,11 @@ ipcMain.handle('dialog:openFolder', async () => {
   if (canceled || filePaths.length === 0) return null;
   const folderPath = filePaths[0];
   lastDirectory = folderPath;
+  const supportedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif'];
   const entries = fs.readdirSync(folderPath);
-  const pdfNames = entries.filter(function(e) { return e.toLowerCase().endsWith('.pdf'); }).sort();
+  const pdfNames = entries.filter(function(e) {
+    return supportedExts.includes(path.extname(e).toLowerCase());
+  }).sort();
   return pdfNames.map(function(name) {
     const fp = path.join(folderPath, name);
     const fileData = fs.readFileSync(fp);

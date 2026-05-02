@@ -163,7 +163,12 @@ function showMergeOrderDialog() {
 
         const tdType = document.createElement('td');
         tdType.className = 'merge-td-type';
-        tdType.textContent = 'PDF 파일';
+        tdType.textContent = (function(name) {
+          const ext = name.split('.').pop().toLowerCase();
+          const map = { pdf: 'PDF 파일', jpg: 'JPEG 이미지', jpeg: 'JPEG 이미지', png: 'PNG 이미지',
+                        gif: 'GIF 이미지', bmp: 'BMP 이미지', webp: 'WebP 이미지', tiff: 'TIFF 이미지', tif: 'TIFF 이미지' };
+          return map[ext] || '파일';
+        })(file.name);
 
         const tdDate = document.createElement('td');
         tdDate.className = 'merge-td-date';
@@ -238,7 +243,8 @@ function showMergeOrderDialog() {
       e.stopPropagation();
       tableWrap.classList.remove('drag-over');
       const droppedFiles = Array.from(e.dataTransfer.files).filter(function(f) {
-        return f.name.toLowerCase().endsWith('.pdf');
+        const ext = f.name.substring(f.name.lastIndexOf('.')).toLowerCase();
+        return ['.pdf','.jpg','.jpeg','.png','.gif','.bmp','.webp','.tiff','.tif'].includes(ext);
       });
       if (droppedFiles.length === 0) return;
       const added = await Promise.all(droppedFiles.map(async function(f) {

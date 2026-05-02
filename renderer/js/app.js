@@ -20,6 +20,36 @@ $('btn-delete').addEventListener('click', async function() {
   }
 });
 
+async function imageToPdfBuffer(buffer) {
+  const blob = new Blob([buffer]);
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await new Promise(function(resolve, reject) {
+      const im = new Image();
+      im.onload = function() { resolve(im); };
+      im.onerror = reject;
+      im.src = url;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    const pngBuf = await new Promise(function(resolve) {
+      canvas.toBlob(function(b) { b.arrayBuffer().then(resolve); }, 'image/png');
+    });
+    const pdfDoc = await PDFLib.PDFDocument.create();
+    const pngImg = await pdfDoc.embedPng(pngBuf);
+    const page = pdfDoc.addPage([pngImg.width, pngImg.height]);
+    page.drawImage(pngImg, { x: 0, y: 0, width: pngImg.width, height: pngImg.height });
+    const bytes = await pdfDoc.save();
+    return bytes.buffer;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+const IMAGE_EXTS = /\.(jpe?g|png|gif|bmp|webp|tiff?)$/i;
+
 $('btn-merge').addEventListener('click', async function() {
   const targetSide = activeSide;
   try {
@@ -27,7 +57,8 @@ $('btn-merge').addEventListener('click', async function() {
     if (!ordered || ordered.length === 0) return;
     const docs = [];
     for (const f of ordered) {
-      const { pdfJsDoc: tmpDoc, pdfLibDoc } = await window.PdfLoader.loadPdf(f.buffer);
+      const buf = IMAGE_EXTS.test(f.name) ? await imageToPdfBuffer(f.buffer) : f.buffer;
+      const { pdfJsDoc: tmpDoc, pdfLibDoc } = await window.PdfLoader.loadPdf(buf);
       tmpDoc.destroy();
       docs.push(pdfLibDoc);
     }
