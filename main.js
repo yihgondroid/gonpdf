@@ -171,3 +171,19 @@ ipcMain.handle('dialog:saveFiles', async (_, files) => {
   lastDirectory = filePaths[0];
   return true;
 });
+
+ipcMain.handle('dialog:openFiles', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWin, {
+    title: 'PDF 파일 열기',
+    filters: [{ name: 'PDF 파일', extensions: ['pdf'] }],
+    properties: ['openFile', 'multiSelections'],
+    ...(lastDirectory ? { defaultPath: lastDirectory } : {}),
+  });
+  if (canceled || filePaths.length === 0) return null;
+  lastDirectory = path.dirname(filePaths[0]);
+  return filePaths.map(function(fp) {
+    const fileData = fs.readFileSync(fp);
+    const arrayBuffer = fileData.buffer.slice(fileData.byteOffset, fileData.byteOffset + fileData.byteLength);
+    return { buffer: arrayBuffer, name: path.basename(fp) };
+  });
+});
