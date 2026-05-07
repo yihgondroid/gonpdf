@@ -4,7 +4,7 @@ function createTab() {
   return {
     pdfJsDoc: null, pdfLibDoc: null, currentPage: 0,
     scale: 1.0, labels: {}, filename: '', undoStack: [], redoStack: [], dirty: false,
-    classified: false, scrollTop: 0
+    classified: false
   };
 }
 
@@ -56,7 +56,7 @@ function sideEls(side) {
 function enableButtons(hasFile, classified) {
   ['btn-delete', 'btn-auto-classify']
     .forEach(function(id) { $(id).disabled = !hasFile; });
-  ['btn-auto-split','btn-auto-left','btn-auto-right','btn-auto-answer','btn-auto-all']
+  ['btn-auto-split','btn-auto-left','btn-auto-right','btn-auto-answer']
     .forEach(function(id) { $(id).disabled = !hasFile || !classified; });
 }
 

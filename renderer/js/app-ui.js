@@ -1,5 +1,14 @@
 // UI 바인딩 — 사이드 컨트롤, 리사이저, 분할뷰, 전체화면, 키보드, 드래그앤드롭
 
+let _saveToastTimer = null;
+function showSaveToast(msg) {
+  const el = document.getElementById('save-toast');
+  el.textContent = msg || '✅ 저장 완료';
+  el.classList.add('visible');
+  clearTimeout(_saveToastTimer);
+  _saveToastTimer = setTimeout(function() { el.classList.remove('visible'); }, 2500);
+}
+
 function bindSideControls(side) {
   const e = sideEls(side);
 

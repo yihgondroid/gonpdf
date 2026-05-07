@@ -1,5 +1,27 @@
 ﻿// 자동분류 & 자동화
 
+// 폴더 선택 → 충돌 확인 → 파일별 이름 바꾸기/덮어쓰기 처리 후 저장
+// 반환: 저장된 파일 배열, 또는 null (취소)
+async function saveFilesWithConflictCheck(files) {
+  const result = await window.electronAPI.selectSaveFolder(files.map(function(f) { return f.name; }));
+  if (!result) return null;
+  const { folderPath, conflicts } = result;
+  const conflictMap = {};
+  for (const c of conflicts) conflictMap[c.original] = c.suggested;
+  const resolvedFiles = [];
+  for (const file of files) {
+    if (conflictMap[file.name]) {
+      const decision = await showFileConflictDialog(file.name, conflictMap[file.name]);
+      if (decision.action === 'cancel') return null;
+      resolvedFiles.push({ name: decision.name, buffer: file.buffer });
+    } else {
+      resolvedFiles.push(file);
+    }
+  }
+  await window.electronAPI.saveFilesToFolder(folderPath, resolvedFiles);
+  return resolvedFiles;
+}
+
 function saveDoc(doc, defaultName) {
   return doc.save().then(function(bytes) {
     return window.electronAPI.saveFile(bytes, defaultName);
@@ -82,90 +104,43 @@ $('btn-auto-classify').addEventListener('click', async function() {
   }
 });
 
-$('btn-auto-split').addEventListener('click', async function() {
+async function runAutoSplit(questionFilter, errorLabel) {
   const st = activeState();
   const base = baseFilename(st);
   try {
     const files = [];
-    const qDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'question');
+    const qDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, questionFilter);
     files.push({ name: base + '_문제.pdf', buffer: await qDoc.save() });
     try {
       const aDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'answer');
       files.push({ name: base + '_해설.pdf', buffer: await aDoc.save() });
-    } catch (_) {}
+    } catch (err) {
+      console.warn('[auto] 해설 PDF 생성 생략 (해설 페이지 없음):', err.message);
+    }
     if (!await showSaveFilesConfirm(files)) return;
-    await window.electronAPI.saveFiles(files);
-    $('status-info').textContent = '저장 완료: ' + files.map(function(f) { return f.name; }).join(', ');
+    const saved = await saveFilesWithConflictCheck(files);
+    if (!saved) return;
+    $('status-info').textContent = '저장 완료: ' + saved.map(function(f) { return f.name; }).join(', ');
+    showSaveToast('✅ 저장 완료 (' + saved.length + '개)');
   } catch (err) {
-    showError('문제+해설 분리 실패: ' + err.message);
+    showError(errorLabel + ' 실패: ' + err.message);
   }
-});
+}
 
-$('btn-auto-left').addEventListener('click', async function() {
-  const st = activeState();
-  const base = baseFilename(st);
-  try {
-    const files = [];
-    const qDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'left');
-    files.push({ name: base + '_문제.pdf', buffer: await qDoc.save() });
-    try {
-      const aDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'answer');
-      files.push({ name: base + '_해설.pdf', buffer: await aDoc.save() });
-    } catch (_) {}
-    if (!await showSaveFilesConfirm(files)) return;
-    await window.electronAPI.saveFiles(files);
-    $('status-info').textContent = '저장 완료: ' + files.map(function(f) { return f.name; }).join(', ');
-  } catch (err) {
-    showError('문제 좌 분리 실패: ' + err.message);
-  }
-});
-
-$('btn-auto-right').addEventListener('click', async function() {
-  const st = activeState();
-  const base = baseFilename(st);
-  try {
-    const files = [];
-    const qDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'right');
-    files.push({ name: base + '_문제.pdf', buffer: await qDoc.save() });
-    try {
-      const aDoc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'answer');
-      files.push({ name: base + '_해설.pdf', buffer: await aDoc.save() });
-    } catch (_) {}
-    if (!await showSaveFilesConfirm(files)) return;
-    await window.electronAPI.saveFiles(files);
-    $('status-info').textContent = '저장 완료: ' + files.map(function(f) { return f.name; }).join(', ');
-  } catch (err) {
-    showError('문제 우 분리 실패: ' + err.message);
-  }
-});
+$('btn-auto-split').addEventListener('click', function() { return runAutoSplit('question', '문제+해설 분리'); });
+$('btn-auto-left').addEventListener('click',  function() { return runAutoSplit('left',     '문제 좌 분리'); });
+$('btn-auto-right').addEventListener('click', function() { return runAutoSplit('right',    '문제 우 분리'); });
 
 $('btn-auto-answer').addEventListener('click', async function() {
   const st = activeState();
   const base = baseFilename(st);
   try {
     const doc = await window.Automation.buildAutomationOutput(st.pdfLibDoc, st.labels, 'answer');
-    await saveDoc(doc, base + '_해설.pdf');
+    const saved = await saveDoc(doc, base + '_해설.pdf');
+    if (!saved) return;
     $('status-info').textContent = base + '_해설.pdf 저장 완료';
+    showSaveToast('✅ 저장 완료');
   } catch (err) {
     showError('해설 분리 실패: ' + err.message);
-  }
-});
-
-$('btn-auto-all').addEventListener('click', async function() {
-  const st = activeState();
-  const base = baseFilename(st);
-  $('status-info').textContent = '전체 분리 처리 중...';
-  try {
-    const outputs = await window.Automation.runAutomationAll(st.pdfLibDoc, st.labels);
-    const suffixes = ['_문제_좌', '_문제_우', '_해설'];
-    const files = [];
-    for (let i = 0; i < outputs.length; i++) {
-      files.push({ name: base + suffixes[i] + '.pdf', buffer: await outputs[i].doc.save() });
-    }
-    if (!await showSaveFilesConfirm(files)) return;
-    await window.electronAPI.saveFiles(files);
-    $('status-info').textContent = '전체 분리 저장 완료 (파일 3개)';
-  } catch (err) {
-    showError('전체 분리 실패: ' + err.message);
   }
 });

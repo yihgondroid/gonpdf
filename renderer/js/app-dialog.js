@@ -1,3 +1,62 @@
+// 파일 충돌 다이얼로그 — 반환: { action: 'rename'|'overwrite'|'cancel', name: string }
+function showFileConflictDialog(originalName, suggestedName) {
+  return new Promise(function(resolve) {
+    const icon      = $('confirm-icon');
+    const msg       = $('confirm-message');
+    const btnYes    = $('confirm-yes');
+    const btnNo     = $('confirm-no');
+    const btnCancel = $('confirm-cancel');
+
+    const prevIcon       = icon.textContent;
+    const prevYesText    = btnYes.textContent;
+    const prevNoText     = btnNo.textContent;
+    const prevNoDisplay  = btnNo.style.display;
+
+    icon.textContent    = '⚠️';
+    btnYes.textContent  = '이름 바꾸기';
+    btnNo.textContent   = '덮어쓰기';
+    btnNo.style.display = '';
+
+    msg.innerHTML = '';
+    const line1 = document.createElement('div');
+    const strong = document.createElement('strong');
+    strong.textContent = originalName;
+    line1.appendChild(strong);
+    line1.appendChild(document.createTextNode(' 파일이 이미 존재합니다.'));
+    const line2 = document.createElement('div');
+    line2.style.cssText = 'margin-top:6px;font-size:11px;color:#a08070;';
+    line2.textContent = '새 이름: ' + suggestedName;
+    msg.appendChild(line1);
+    msg.appendChild(line2);
+
+    $('confirm-overlay').classList.add('visible');
+
+    function cleanup(result) {
+      $('confirm-overlay').classList.remove('visible');
+      icon.textContent    = prevIcon;
+      btnYes.textContent  = prevYesText;
+      btnNo.textContent   = prevNoText;
+      btnNo.style.display = prevNoDisplay;
+      btnYes.removeEventListener('click', onYes);
+      btnNo.removeEventListener('click', onNo);
+      btnCancel.removeEventListener('click', onCancel);
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+    function onYes()    { cleanup({ action: 'rename',    name: suggestedName }); }
+    function onNo()     { cleanup({ action: 'overwrite', name: originalName  }); }
+    function onCancel() { cleanup({ action: 'cancel' }); }
+    function onKey(ev) {
+      if (ev.key === 'Escape') { ev.preventDefault(); cleanup({ action: 'cancel' }); }
+    }
+
+    btnYes.addEventListener('click', onYes);
+    btnNo.addEventListener('click', onNo);
+    btnCancel.addEventListener('click', onCancel);
+    document.addEventListener('keydown', onKey);
+  });
+}
+
 // 저장 파일 목록 확인 다이얼로그
 function showSaveFilesConfirm(files) {
   return new Promise(function(resolve) {

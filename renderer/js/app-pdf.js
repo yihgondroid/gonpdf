@@ -122,6 +122,7 @@ async function saveActive(skipConfirm) {
     if (saved) {
       st.dirty = false;
       renderTabBar(activeSide);
+      showSaveToast('✅ 저장 완료');
     }
     return saved;
   } catch (err) {

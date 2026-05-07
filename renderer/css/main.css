@@ -40,7 +40,7 @@ body {
 #btn-delete, #btn-merge { background: #C8F0E0; }
 #btn-auto-classify, #btn-auto-split,
 #btn-auto-left, #btn-auto-right,
-#btn-auto-answer, #btn-auto-all { background: #E8D5FF; }
+#btn-auto-answer { background: #E8D5FF; }
 
 /* ── 탭 바 ── */
 #tab-bar-container {
@@ -438,6 +438,30 @@ body.fullscreen-mode #panel-resizer-right { display: none !important; }
   white-space: nowrap;
 }
 #fullscreen-toast.visible { opacity: 1; }
+
+#save-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, calc(-50% + 12px));
+  background: #C8F0E0;
+  color: #1a5c40;
+  border: 1.5px solid #8EDCBE;
+  padding: 10px 24px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-family: 'Malgun Gothic', sans-serif;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 9998;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,160,100,0.15);
+}
+#save-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+}
 
 /* 확인 다이얼로그 */
 #confirm-overlay {

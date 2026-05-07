@@ -38,3 +38,4 @@ publish:
   provider: github
   owner: yihgondroid
   repo: gonpdf
+  releaseType: release

@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFile: (buffer, defaultName) =>
     ipcRenderer.invoke('dialog:saveFile', { buffer, defaultName }),
   saveFiles: (files) => ipcRenderer.invoke('dialog:saveFiles', files),
+  selectSaveFolder: (fileNames) => ipcRenderer.invoke('dialog:selectSaveFolder', fileNames),
+  saveFilesToFolder: (folderPath, files) => ipcRenderer.invoke('dialog:saveFilesToFolder', { folderPath, files }),
   onMenuOpen: (cb) => ipcRenderer.on('menu:open', cb),
   onMenuSave: (cb) => ipcRenderer.on('menu:save', cb),
   onMenuUndo: (cb) => ipcRenderer.on('menu:undo', cb),
