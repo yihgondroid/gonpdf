@@ -9,6 +9,7 @@
     "build": "electron-builder"
   },
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^3.11.174",
     "sortablejs": "^1.15.2",
@@ -42,7 +43,9 @@
       "target": [
         {
           "target": "zip",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": null

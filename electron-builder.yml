@@ -33,3 +33,8 @@ extraResources:
   - from: node_modules/tesseract.js/
     to: tesseract/
     filter: ["**/*"]
+
+publish:
+  provider: github
+  owner: yihgondroid
+  repo: gonpdf
