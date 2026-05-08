@@ -182,6 +182,17 @@ window.Viewer = (function() {
     if (wrap._pageScrollHandler) wrap.removeEventListener('scroll', wrap._pageScrollHandler);
     if (wrap._renderObserver)    wrap._renderObserver.disconnect();
     wrap._generation = (wrap._generation || 0) + 1;
+
+    // 이 wrap에 속한 pending 렌더를 모두 취소 (DOM 분리 전에 처리)
+    var toCancel = [];
+    _pendingRenders.forEach(function(pending, id) {
+      if (wrap.contains(pending.canvas)) toCancel.push(id);
+    });
+    toCancel.forEach(function(id) {
+      _renderWorker.postMessage({ type: 'cancel', id: id });
+      _pendingRenders.delete(id);
+    });
+
     wrap.innerHTML   = '';
 
     // 플레이스홀더 크기 계산

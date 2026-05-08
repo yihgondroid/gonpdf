@@ -26,9 +26,17 @@ async function _loadDoc({ docId, buffer }) {
     _docCache.set(docId, doc);
     const queued = _pending.get(docId) || [];
     _pending.delete(docId);
-    queued.forEach(_handleRender);
+    queued.forEach(function(req) {
+      if (_cancelled.has(req.id)) { _cancelled.delete(req.id); return; }
+      _handleRender(req);
+    });
   } catch (err) {
     console.error('render-worker load:', err);
+    const queued = _pending.get(docId) || [];
+    _pending.delete(docId);
+    queued.forEach(function(req) {
+      self.postMessage({ id: req.id, phase: 'error', error: 'load failed: ' + err.message });
+    });
   }
 }
 
