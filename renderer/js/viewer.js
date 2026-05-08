@@ -7,13 +7,15 @@ window.Viewer = (function() {
 
   function _cacheGet(doc, idx, scale) {
     const m = _pageCache.get(doc);
-    return m ? m.get(idx + '_' + Math.round(scale * 100)) : null;
+    const dpr = window.devicePixelRatio || 1;
+    return m ? m.get(idx + '_' + Math.round(scale * 100) + '_' + dpr) : null;
   }
 
   function _cacheSet(doc, idx, scale, bitmap) {
     if (!_pageCache.has(doc)) _pageCache.set(doc, new Map());
     const m = _pageCache.get(doc);
-    m.set(idx + '_' + Math.round(scale * 100), bitmap);
+    const dpr = window.devicePixelRatio || 1;
+    m.set(idx + '_' + Math.round(scale * 100) + '_' + dpr, bitmap);
     if (m.size > _CACHE_MAX) m.delete(m.keys().next().value);
   }
 
