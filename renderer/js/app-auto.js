@@ -32,9 +32,8 @@ function baseFilename(st) {
   return (st.filename || 'output').replace(/\.pdf$/i, '');
 }
 
-$('btn-auto-classify').addEventListener('click', async function() {
-  const side = activeSide;
-  const st = activeState();
+async function runAutoClassify(side) {
+  const st = sideState(side);
   const e = sideEls(side);
   if (!st.pdfJsDoc) return;
 
@@ -66,6 +65,8 @@ $('btn-auto-classify').addEventListener('click', async function() {
       const koreanCount = (text.match(/[가-힣]/g) || []).length;
       const koreanRatio = text.length > 0 ? koreanCount / text.length : 0;
       pageData.push({ len: text.length, score, qScore, koreanRatio });
+      // 이벤트 루프 양보 — 렌더링 차단 방지
+      await new Promise(function(r) { setTimeout(r, 0); });
     }
 
     const avgLen = pageData.reduce(function(s, d) { return s + d.len; }, 0) / pageCount;
@@ -102,6 +103,10 @@ $('btn-auto-classify').addEventListener('click', async function() {
     btn.disabled = false;
     btn.textContent = '🤖 자동분류';
   }
+}
+
+$('btn-auto-classify').addEventListener('click', function() {
+  runAutoClassify(activeSide);
 });
 
 async function runAutoSplit(questionFilter, errorLabel) {

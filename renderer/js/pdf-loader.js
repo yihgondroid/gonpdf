@@ -12,31 +12,17 @@ function _getWorker() {
   return _pdfWorker;
 }
 
-async function loadPdf(arrayBuffer, filePath) {
+async function loadPdf(arrayBuffer) {
   await _workerReady;
   const bytes = new Uint8Array(arrayBuffer);
-  const commonParams = {
+  const pdfJsDoc = await pdfjsLib.getDocument({
     cMapUrl: '../node_modules/pdfjs-dist/cmaps/',
     cMapPacked: true,
     standardFontDataUrl: '../node_modules/pdfjs-dist/standard_fonts/',
     worker: _getWorker(),
     verbosity: 0,
-  };
-
-  let pdfJsDoc;
-  if (filePath) {
-    pdfJsDoc = await pdfjsLib.getDocument({
-      ...commonParams,
-      url: 'pdffile://' + encodeURIComponent(filePath),
-      disableRange: false,
-      disableStream: false,
-    }).promise;
-  } else {
-    pdfJsDoc = await pdfjsLib.getDocument({
-      ...commonParams,
-      data: bytes.slice(),
-    }).promise;
-  }
+    data: bytes.slice(),
+  }).promise;
 
   const pdfLibDoc = await PDFLib.PDFDocument.load(bytes.slice());
   return { pdfJsDoc, pdfLibDoc };

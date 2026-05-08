@@ -1,4 +1,9 @@
-﻿const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
+﻿const { app, BrowserWindow, ipcMain, dialog, Menu, protocol } = require('electron');
+
+// pdffile:// 커스텀 프로토콜 (스트리밍용) — must be before ready
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'pdffile', privileges: { bypassCSP: true, supportFetchAPI: true } }
+]);
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -105,7 +110,50 @@ function createWindow() {
   mainWin = win;
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // Range 요청 지원 파일 스트리밍 프로토콜
+  protocol.handle('pdffile', async (request) => {
+    try {
+      const filePath = decodeURIComponent(request.url.slice('pdffile://'.length));
+      const stat = fs.statSync(filePath);
+      const size = stat.size;
+      const rangeHeader = request.headers.get('Range');
+      if (rangeHeader) {
+        const m = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+        if (m) {
+          const start = parseInt(m[1], 10);
+          const end   = m[2] ? parseInt(m[2], 10) : size - 1;
+          const len   = end - start + 1;
+          const buf   = Buffer.allocUnsafe(len);
+          const fd    = fs.openSync(filePath, 'r');
+          fs.readSync(fd, buf, 0, len, start);
+          fs.closeSync(fd);
+          return new Response(buf, {
+            status: 206,
+            headers: {
+              'Content-Type':  'application/pdf',
+              'Content-Range': `bytes ${start}-${end}/${size}`,
+              'Accept-Ranges': 'bytes',
+              'Content-Length': String(len),
+            }
+          });
+        }
+      }
+      const data = fs.readFileSync(filePath);
+      return new Response(data, {
+        status: 200,
+        headers: {
+          'Content-Type':  'application/pdf',
+          'Accept-Ranges': 'bytes',
+          'Content-Length': String(size),
+        }
+      });
+    } catch (e) {
+      return new Response('Not Found', { status: 404 });
+    }
+  });
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -123,7 +171,7 @@ ipcMain.handle('dialog:openFile', async () => {
   try {
     const fileData = fs.readFileSync(filePaths[0]);
     const arrayBuffer = fileData.buffer.slice(fileData.byteOffset, fileData.byteOffset + fileData.byteLength);
-    return { buffer: arrayBuffer, name: path.basename(filePaths[0]) };
+    return { buffer: arrayBuffer, filePath: filePaths[0], name: path.basename(filePaths[0]) };
   } catch (err) {
     throw new Error('파일을 읽을 수 없습니다: ' + err.message);
   }

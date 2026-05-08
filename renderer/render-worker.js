@@ -1,6 +1,10 @@
 // render-worker.js
 importScripts('../node_modules/pdfjs-dist/build/pdf.js');
-pdfjsLib.GlobalWorkerOptions.workerSrc = '../node_modules/pdfjs-dist/build/pdf.worker.js';
+
+// pdf.worker.js를 blob URL로 로드 — 렌더 워커 안에서 서브 워커 생성 시 경로 문제 회피
+const _ready = fetch('../node_modules/pdfjs-dist/build/pdf.worker.js')
+  .then(function(r) { return r.blob(); })
+  .then(function(b) { pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(b); });
 
 const _docCache  = new Map();  // docId → PDFDocumentProxy
 const _pending   = new Map();  // docId → [render requests] (도착 시 doc 미준비 대기열)
@@ -16,6 +20,7 @@ self.onmessage = function(e) {
 
 async function _loadDoc({ docId, buffer }) {
   try {
+    await _ready;
     const doc = await pdfjsLib.getDocument({
       data: buffer,
       cMapUrl: '../node_modules/pdfjs-dist/cmaps/',
