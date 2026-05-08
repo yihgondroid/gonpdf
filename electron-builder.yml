@@ -2,7 +2,11 @@ appId: com.pdfeditor.app
 productName: PDF 편집 툴
 copyright: Copyright © 2026
 
-asar: false
+asar: true
+asarUnpack:
+  - "node_modules/pdfjs-dist/build/pdf.worker.js"
+  - "node_modules/pdfjs-dist/cmaps/**"
+  - "node_modules/pdfjs-dist/standard_fonts/**"
 
 directories:
   output: dist
@@ -20,6 +24,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
+  license: LICENSES.txt
 
 files:
   - main.js
@@ -28,6 +33,8 @@ files:
   - "!renderer/js/**/*.test.js"
   - node_modules/**
   - "!node_modules/.cache/**"
+  - LICENSE
+  - LICENSES.txt
 
 extraResources:
   - from: node_modules/tesseract.js/
