@@ -162,6 +162,7 @@ window.Viewer = (function() {
 
   // ── IntersectionObserver 생성 (재사용) ──
   function _makeObserver(pdfJsDoc, wrap) {
+    const margin = Math.round(wrap.clientHeight * 1.5) + 'px';
     return new IntersectionObserver(function(entries) {
       entries.forEach(function(entry) {
         if (entry.isIntersecting && !entry.target._rendered) {
@@ -171,7 +172,7 @@ window.Viewer = (function() {
           _renderToCanvas(pdfJsDoc, idx, c, wrap._currentScale);
         }
       });
-    }, { root: wrap, rootMargin: '300px 0px' });
+    }, { root: wrap, rootMargin: margin + ' 0px' });
   }
 
   // ── 전체 페이지 초기 렌더 ──
