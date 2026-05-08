@@ -26,7 +26,7 @@ async function setupContinuousViewer(side) {
   await window.Viewer.renderAllPages(st.pdfJsDoc, e.viewerCanvasWrap, st.scale, function(pi) {
     st.currentPage = pi;
     window.Viewer.updatePageInfo(e.pageInfo, pi, window.PdfLoader.getPageCount(st.pdfJsDoc));
-  });
+  }, st.pdfUrl);
 }
 
 function selectPage(side, pageIndex) {
@@ -38,7 +38,7 @@ function selectPage(side, pageIndex) {
   window.Thumbnail.setSelected(e.thumbnailList, pageIndex);
 }
 
-async function loadPdf(side, buffer, name) {
+async function loadPdf(side, buffer, name, filePath) {
   const tabs = side === 'left' ? tabsL : tabsR;
   let idx = side === 'left' ? activeTabL : activeTabR;
 
@@ -53,7 +53,7 @@ async function loadPdf(side, buffer, name) {
   const e   = sideEls(side);
 
   try {
-    const { pdfJsDoc, pdfLibDoc } = await window.PdfLoader.loadPdf(buffer);
+    const { pdfJsDoc, pdfLibDoc, pdfUrl } = await window.PdfLoader.loadPdf(buffer, filePath);
     tab.pdfJsDoc         = pdfJsDoc;
     tab.pdfLibDoc        = pdfLibDoc;
     tab.currentPage      = 0;
@@ -63,6 +63,7 @@ async function loadPdf(side, buffer, name) {
     tab.redoStack.length = 0;
     tab.dirty            = false;
     tab.classified       = false;
+    tab.pdfUrl           = pdfUrl;
 
     // 뷰어 너비에 맞춰 초기 스케일 결정
     try {
@@ -103,7 +104,7 @@ async function openFile() {
   try {
     const result = await window.electronAPI.openFile();
     if (!result) return;
-    await loadPdf(activeSide, result.buffer, result.name);
+    await loadPdf(activeSide, result.buffer, result.name, result.filePath);
   } catch (err) {
     showError('파일 열기 실패: ' + err.message);
   }
