@@ -182,7 +182,10 @@ async function renderThumbCanvas(pdfJsDoc, pageIndex, canvas) {
   const scaledViewport = page.getViewport({ scale: scale });
   canvas.width = scaledViewport.width;
   canvas.height = scaledViewport.height;
-  await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
   const img = document.createElement('img');
   img.src = canvas.toDataURL();
   img.style.width = '100%';
