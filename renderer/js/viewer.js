@@ -19,67 +19,11 @@ window.Viewer = (function() {
     if (m.size > _CACHE_MAX) m.delete(m.keys().next().value);
   }
 
-  // ── Render Worker ──
-  const _renderWorker = new Worker('render-worker.js');
-  let _reqId = 0;
-  const _pendingRenders = new Map(); // reqId → { canvas, pdfJsDoc, pageIndex, scale }
-
-  // ── Doc Registry ──
-  const _docRegistry = new WeakMap(); // pdfJsDoc → docId
-  let _docIdCounter = 0;
-
-  function registerDoc(pdfJsDoc, buffer) {
-    if (_docRegistry.has(pdfJsDoc)) return;
-    const docId = ++_docIdCounter;
-    _docRegistry.set(pdfJsDoc, docId);
-    const copy = buffer instanceof ArrayBuffer
-      ? buffer.slice()
-      : buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-    _renderWorker.postMessage({ type: 'load', docId, buffer: copy }, [copy]);
-  }
-
-  _renderWorker.onmessage = function(e) {
-    const { id, phase, bitmap, displayW, displayH, error } = e.data;
-    const pending = _pendingRenders.get(id);
-    if (!pending) { if (bitmap) bitmap.close(); return; }
-
-    const { canvas, pdfJsDoc, pageIndex, scale } = pending;
-
-    if (phase === 'error') {
-      console.error('render-worker:', error);
-      _pendingRenders.delete(id);
-      return;
-    }
-
-    canvas.width  = bitmap.width;
-    canvas.height = bitmap.height;
-    canvas.getContext('2d').drawImage(bitmap, 0, 0);
-    bitmap.close();
-    canvas.style.width   = displayW + 'px';
-    canvas.style.height  = displayH + 'px';
-    canvas.style.display = 'inline-block';
-    canvas.classList.remove('skeleton');
-    if (canvas.parentElement) canvas.parentElement.style.minHeight = displayH + 'px';
-
-    if (phase === 'high') {
-      createImageBitmap(canvas).then(function(bmp) {
-        _cacheSet(pdfJsDoc, pageIndex, scale, bmp);
-      });
-      _pendingRenders.delete(id);
-      canvas._renderTask = null;
-    }
-  };
-
   // ── 페이지 렌더링 (저화질 → 고화질 점진) ──
   async function _renderToCanvas(pdfJsDoc, pageIndex, canvas, scale) {
     // 기존 렌더 취소
     if (canvas._renderTask) {
-      if (typeof canvas._renderTask === 'number') {
-        _renderWorker.postMessage({ type: 'cancel', id: canvas._renderTask });
-        _pendingRenders.delete(canvas._renderTask);
-      } else {
-        canvas._renderTask.cancel();
-      }
+      canvas._renderTask.cancel();
       canvas._renderTask = null;
     }
 
@@ -94,23 +38,10 @@ window.Viewer = (function() {
       canvas.style.height  = (cached.height / dpr / sharp) + 'px';
       canvas.style.display = 'inline-block';
       canvas.getContext('2d').drawImage(cached, 0, 0);
-      canvas.classList.remove('skeleton');
       if (canvas.parentElement) canvas.parentElement.style.minHeight = canvas.style.height;
       return;
     }
 
-    const docId = _docRegistry.get(pdfJsDoc);
-    if (docId !== undefined) {
-      // Worker 경로
-      const id  = ++_reqId;
-      const dpr = window.devicePixelRatio || 1;
-      canvas._renderTask = id;
-      _pendingRenders.set(id, { canvas, pdfJsDoc, pageIndex, scale });
-      _renderWorker.postMessage({ type: 'render', id, docId, pageIndex, scale, dpr });
-      return;
-    }
-
-    // Fallback: main-thread 렌더 (registerDoc 미호출 시)
     const page  = await pdfJsDoc.getPage(pageIndex + 1);
     const dpr   = window.devicePixelRatio || 1;
     const sharp = Math.max(1.5, Math.min(2, 2 / scale));
@@ -120,8 +51,10 @@ window.Viewer = (function() {
 
     const lowVp  = page.getViewport({ scale: scale * dpr * 0.5 });
     const lowBuf = document.createElement('canvas');
-    lowBuf.width  = lowVp.width;
-    lowBuf.height = lowVp.height;
+    lowBuf.width  = Math.round(lowVp.width);
+    lowBuf.height = Math.round(lowVp.height);
+    lowBuf.getContext('2d').fillStyle = '#ffffff';
+    lowBuf.getContext('2d').fillRect(0, 0, lowBuf.width, lowBuf.height);
     const lowTask = page.render({ canvasContext: lowBuf.getContext('2d'), viewport: lowVp });
     canvas._renderTask = lowTask;
 
@@ -133,7 +66,6 @@ window.Viewer = (function() {
       canvas.style.height  = displayH;
       canvas.style.display = 'inline-block';
       canvas.getContext('2d').drawImage(lowBuf, 0, 0);
-      canvas.classList.remove('skeleton');
       if (canvas.parentElement) canvas.parentElement.style.minHeight = displayH;
     } catch (e) {
       if (e && e.name !== 'RenderingCancelledException') console.error('render-low:', e);
@@ -142,8 +74,10 @@ window.Viewer = (function() {
     }
 
     const highBuf = document.createElement('canvas');
-    highBuf.width  = fullVp.width;
-    highBuf.height = fullVp.height;
+    highBuf.width  = Math.round(fullVp.width);
+    highBuf.height = Math.round(fullVp.height);
+    highBuf.getContext('2d').fillStyle = '#ffffff';
+    highBuf.getContext('2d').fillRect(0, 0, highBuf.width, highBuf.height);
     const highTask = page.render({ canvasContext: highBuf.getContext('2d'), viewport: fullVp });
     canvas._renderTask = highTask;
 
@@ -183,17 +117,7 @@ window.Viewer = (function() {
     if (wrap._renderObserver)    wrap._renderObserver.disconnect();
     wrap._generation = (wrap._generation || 0) + 1;
 
-    // 이 wrap에 속한 pending 렌더를 모두 취소 (DOM 분리 전에 처리)
-    var toCancel = [];
-    _pendingRenders.forEach(function(pending, id) {
-      if (wrap.contains(pending.canvas)) toCancel.push(id);
-    });
-    toCancel.forEach(function(id) {
-      _renderWorker.postMessage({ type: 'cancel', id: id });
-      _pendingRenders.delete(id);
-    });
-
-    wrap.innerHTML   = '';
+    wrap.innerHTML = '';
 
     // 플레이스홀더 크기 계산
     const firstPage = await pdfJsDoc.getPage(1);
@@ -209,7 +133,7 @@ window.Viewer = (function() {
       pageDiv.dataset.pageIndex = i;
       pageDiv.style.minHeight = phH;
       var canvas = document.createElement('canvas');
-      canvas.className     = 'pdf-page-canvas skeleton';
+      canvas.className     = 'pdf-page-canvas';
       canvas.style.width   = phW;
       canvas.style.height  = phH;
       canvas.style.display = 'inline-block';
@@ -312,7 +236,7 @@ window.Viewer = (function() {
     await _renderToCanvas(pdfJsDoc, pageIndex, canvas, scale);
   }
 
-  return { registerDoc, renderPage, renderAllPages, scrollToPage, rerenderAllPages, updatePageInfo, updateZoomInfo, scaleFromSlider };
+  return { renderPage, renderAllPages, scrollToPage, rerenderAllPages, updatePageInfo, updateZoomInfo, scaleFromSlider };
 })();
 
 if (typeof module !== 'undefined') module.exports = window.Viewer;

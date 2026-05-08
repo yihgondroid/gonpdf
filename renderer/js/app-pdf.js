@@ -53,8 +53,7 @@ async function loadPdf(side, buffer, name, filePath) {
   const e   = sideEls(side);
 
   try {
-    const { pdfJsDoc, pdfLibDoc } = await window.PdfLoader.loadPdf(buffer, filePath);
-    window.Viewer.registerDoc(pdfJsDoc, buffer);
+    const { pdfJsDoc, pdfLibDoc } = await window.PdfLoader.loadPdf(buffer);
     tab.pdfJsDoc         = pdfJsDoc;
     tab.pdfLibDoc        = pdfLibDoc;
     tab.currentPage      = 0;
@@ -138,7 +137,6 @@ async function reloadSide(side) {
   try {
     const newBytes = await st.pdfLibDoc.save();
     const { pdfJsDoc, pdfLibDoc } = await window.PdfLoader.loadPdf(newBytes.buffer);
-    window.Viewer.registerDoc(pdfJsDoc, newBytes.buffer);
     st.pdfJsDoc    = pdfJsDoc;
     st.pdfLibDoc   = pdfLibDoc;
     st.currentPage = Math.min(st.currentPage, pdfJsDoc.numPages - 1);

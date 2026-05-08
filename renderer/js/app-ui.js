@@ -22,13 +22,21 @@ function bindSideControls(side) {
   });
 
   e.zoomSlider.addEventListener('input', function(ev) {
-    const st = sideState(side);
+    const st   = sideState(side);
+    const wrap = e.viewerCanvasWrap;
+    const oldScale = st.scale;
     st.scale = window.Viewer.scaleFromSlider(Number(ev.target.value));
     window.Viewer.updateZoomInfo(e.zoomInfo, st.scale);
     if (!st.pdfJsDoc) return;
+
+    // 뷰 중앙 기준 스크롤 보정
+    const centerY   = wrap.clientHeight / 2;
+    const ratio     = st.scale / oldScale;
+    wrap.scrollTop  = (wrap.scrollTop + centerY) * ratio - centerY;
+
     clearTimeout(st._zoomTimer);
     st._zoomTimer = setTimeout(function() {
-      window.Viewer.rerenderAllPages(e.viewerCanvasWrap, st.pdfJsDoc, st.scale);
+      window.Viewer.rerenderAllPages(wrap, st.pdfJsDoc, st.scale);
     }, 120);
   });
 
@@ -39,18 +47,26 @@ function bindSideControls(side) {
   });
 
   e.viewerCanvasWrap.addEventListener('wheel', function(ev) {
-    const st = sideState(side);
+    const st   = sideState(side);
+    const wrap = e.viewerCanvasWrap;
     if (!st.pdfJsDoc) return;
     if (splitMode) setActiveSide(side);
     if (ev.ctrlKey) {
       ev.preventDefault();
-      const newVal = Math.max(50, Math.min(400, Number(e.zoomSlider.value) + (ev.deltaY < 0 ? 10 : -10)));
+      const oldScale = st.scale;
+      const newVal   = Math.max(50, Math.min(400, Number(e.zoomSlider.value) + (ev.deltaY < 0 ? 10 : -10)));
       e.zoomSlider.value = newVal;
       st.scale = newVal / 100;
       window.Viewer.updateZoomInfo(e.zoomInfo, st.scale);
+
+      // 마우스 포인터 위치 기준으로 스크롤 보정
+      const mouseY      = ev.clientY - wrap.getBoundingClientRect().top;
+      const ratio       = st.scale / oldScale;
+      wrap.scrollTop    = (wrap.scrollTop + mouseY) * ratio - mouseY;
+
       clearTimeout(st._zoomTimer);
       st._zoomTimer = setTimeout(function() {
-        window.Viewer.rerenderAllPages(e.viewerCanvasWrap, st.pdfJsDoc, st.scale);
+        window.Viewer.rerenderAllPages(wrap, st.pdfJsDoc, st.scale);
       }, 120);
     }
   }, { passive: false });
@@ -134,6 +150,10 @@ $('btn-split-view').addEventListener('click', function() {
   if (splitMode) {
     setActiveSide('left');
     document.getElementById('viewer-panel-left').classList.add('active');
+    // 패널 폭이 절반으로 바뀌므로 다음 프레임 후 좌측 뷰어 스케일 재계산
+    setTimeout(function() {
+      fitViewerToWidth('left');
+    }, 0);
   } else {
     document.getElementById('viewer-panel-left').classList.remove('active');
     document.getElementById('viewer-panel-right').classList.remove('active');
