@@ -26,7 +26,7 @@ async function setupContinuousViewer(side) {
   await window.Viewer.renderAllPages(st.pdfJsDoc, e.viewerCanvasWrap, st.scale, function(pi) {
     st.currentPage = pi;
     window.Viewer.updatePageInfo(e.pageInfo, pi, window.PdfLoader.getPageCount(st.pdfJsDoc));
-  }, st.pdfUrl);
+  });
 }
 
 function selectPage(side, pageIndex) {
@@ -53,7 +53,8 @@ async function loadPdf(side, buffer, name, filePath) {
   const e   = sideEls(side);
 
   try {
-    const { pdfJsDoc, pdfLibDoc, pdfUrl } = await window.PdfLoader.loadPdf(buffer, filePath);
+    const { pdfJsDoc, pdfLibDoc } = await window.PdfLoader.loadPdf(buffer, filePath);
+    window.Viewer.registerDoc(pdfJsDoc, buffer);
     tab.pdfJsDoc         = pdfJsDoc;
     tab.pdfLibDoc        = pdfLibDoc;
     tab.currentPage      = 0;
@@ -63,7 +64,6 @@ async function loadPdf(side, buffer, name, filePath) {
     tab.redoStack.length = 0;
     tab.dirty            = false;
     tab.classified       = false;
-    tab.pdfUrl           = pdfUrl;
 
     // 뷰어 너비에 맞춰 초기 스케일 결정
     try {
@@ -138,6 +138,7 @@ async function reloadSide(side) {
   try {
     const newBytes = await st.pdfLibDoc.save();
     const { pdfJsDoc, pdfLibDoc } = await window.PdfLoader.loadPdf(newBytes.buffer);
+    window.Viewer.registerDoc(pdfJsDoc, newBytes.buffer);
     st.pdfJsDoc    = pdfJsDoc;
     st.pdfLibDoc   = pdfLibDoc;
     st.currentPage = Math.min(st.currentPage, pdfJsDoc.numPages - 1);

@@ -24,13 +24,10 @@ async function loadPdf(arrayBuffer, filePath) {
   };
 
   let pdfJsDoc;
-  let pdfUrl = null;
-
   if (filePath) {
-    pdfUrl = 'pdffile://' + encodeURIComponent(filePath);
     pdfJsDoc = await pdfjsLib.getDocument({
       ...commonParams,
-      url: pdfUrl,
+      url: 'pdffile://' + encodeURIComponent(filePath),
       disableRange: false,
       disableStream: false,
     }).promise;
@@ -42,7 +39,7 @@ async function loadPdf(arrayBuffer, filePath) {
   }
 
   const pdfLibDoc = await PDFLib.PDFDocument.load(bytes.slice());
-  return { pdfJsDoc, pdfLibDoc, pdfUrl };
+  return { pdfJsDoc, pdfLibDoc };
 }
 
 function getPageCount(pdfJsDoc) {

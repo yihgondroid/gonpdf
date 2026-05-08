@@ -22,6 +22,20 @@ window.Viewer = (function() {
   let _reqId = 0;
   const _pendingRenders = new Map(); // reqId → { canvas, pdfJsDoc, pageIndex, scale }
 
+  // ── Doc Registry ──
+  const _docRegistry = new WeakMap(); // pdfJsDoc → docId
+  let _docIdCounter = 0;
+
+  function registerDoc(pdfJsDoc, buffer) {
+    if (_docRegistry.has(pdfJsDoc)) return;
+    const docId = ++_docIdCounter;
+    _docRegistry.set(pdfJsDoc, docId);
+    const copy = buffer instanceof ArrayBuffer
+      ? buffer.slice()
+      : buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+    _renderWorker.postMessage({ type: 'load', docId, buffer: copy }, [copy]);
+  }
+
   _renderWorker.onmessage = function(e) {
     const { id, phase, bitmap, displayW, displayH, error } = e.data;
     const pending = _pendingRenders.get(id);
@@ -55,7 +69,7 @@ window.Viewer = (function() {
   };
 
   // ── 페이지 렌더링 (저화질 → 고화질 점진) ──
-  async function _renderToCanvas(pdfJsDoc, pageIndex, canvas, scale, pdfUrl) {
+  async function _renderToCanvas(pdfJsDoc, pageIndex, canvas, scale) {
     // 기존 렌더 취소
     if (canvas._renderTask) {
       if (typeof canvas._renderTask === 'number') {
@@ -83,26 +97,25 @@ window.Viewer = (function() {
       return;
     }
 
-    // Worker 경로 (pdfUrl 있음)
-    if (pdfUrl) {
+    const docId = _docRegistry.get(pdfJsDoc);
+    if (docId !== undefined) {
+      // Worker 경로
       const id  = ++_reqId;
       const dpr = window.devicePixelRatio || 1;
       canvas._renderTask = id;
       _pendingRenders.set(id, { canvas, pdfJsDoc, pageIndex, scale });
-      _renderWorker.postMessage({ type: 'render', id, pdfUrl, pageIndex, scale, dpr });
+      _renderWorker.postMessage({ type: 'render', id, docId, pageIndex, scale, dpr });
       return;
     }
 
-    // Fallback: main-thread 렌더 (편집 후 reload 등 pdfUrl 없는 경우)
+    // Fallback: main-thread 렌더 (registerDoc 미호출 시)
     const page  = await pdfJsDoc.getPage(pageIndex + 1);
     const dpr   = window.devicePixelRatio || 1;
     const sharp = Math.max(1.5, Math.min(2, 2 / scale));
-
     const fullVp  = page.getViewport({ scale: scale * dpr * sharp });
     const displayW = (fullVp.width  / dpr / sharp) + 'px';
     const displayH = (fullVp.height / dpr / sharp) + 'px';
 
-    // ── 1단계: 저화질 (빠른 미리보기) ──
     const lowVp  = page.getViewport({ scale: scale * dpr * 0.5 });
     const lowBuf = document.createElement('canvas');
     lowBuf.width  = lowVp.width;
@@ -126,7 +139,6 @@ window.Viewer = (function() {
       return;
     }
 
-    // ── 2단계: 고화질 (선명하게 교체) ──
     const highBuf = document.createElement('canvas');
     highBuf.width  = fullVp.width;
     highBuf.height = fullVp.height;
@@ -156,19 +168,18 @@ window.Viewer = (function() {
           entry.target._rendered = true;
           var c   = entry.target.querySelector('.pdf-page-canvas');
           var idx = Number(entry.target.dataset.pageIndex);
-          _renderToCanvas(pdfJsDoc, idx, c, wrap._currentScale, wrap._pdfUrl);
+          _renderToCanvas(pdfJsDoc, idx, c, wrap._currentScale);
         }
       });
     }, { root: wrap, rootMargin: '300px 0px' });
   }
 
   // ── 전체 페이지 초기 렌더 ──
-  async function renderAllPages(pdfJsDoc, wrap, scale, onCurrentPage, pdfUrl) {
+  async function renderAllPages(pdfJsDoc, wrap, scale, onCurrentPage) {
     if (wrap._pageScrollHandler) wrap.removeEventListener('scroll', wrap._pageScrollHandler);
     if (wrap._renderObserver)    wrap._renderObserver.disconnect();
     wrap._generation = (wrap._generation || 0) + 1;
     wrap.innerHTML   = '';
-    wrap._pdfUrl     = pdfUrl || null;
 
     // 플레이스홀더 크기 계산
     const firstPage = await pdfJsDoc.getPage(1);
@@ -198,7 +209,7 @@ window.Viewer = (function() {
     var firstDiv = wrap.querySelector('[data-page-index="0"]');
     if (firstDiv) {
       firstDiv._rendered = true;
-      await _renderToCanvas(pdfJsDoc, 0, firstDiv.querySelector('.pdf-page-canvas'), scale, pdfUrl);
+      await _renderToCanvas(pdfJsDoc, 0, firstDiv.querySelector('.pdf-page-canvas'), scale);
     }
 
     // IntersectionObserver: 보이는 페이지만 렌더링
@@ -258,11 +269,11 @@ window.Viewer = (function() {
       if (bottom >= scrollTop - 400 && top <= scrollBottom + 400) {
         pageDiv._rendered = true;
         _renderToCanvas(pdfJsDoc, Number(pageDiv.dataset.pageIndex),
-          pageDiv.querySelector('.pdf-page-canvas'), scale, wrap._pdfUrl);
+          pageDiv.querySelector('.pdf-page-canvas'), scale);
       }
     });
 
-    // Observer 재연결: 줌 후 스크롤 시 나머지 페이지도 재렌더
+    // Observer 재연결
     if (wrap._renderObserver) {
       wrap._renderObserver.disconnect();
       var observer = _makeObserver(pdfJsDoc, wrap);
@@ -283,11 +294,11 @@ window.Viewer = (function() {
     return value / 100;
   }
 
-  async function renderPage(pdfJsDoc, pageIndex, canvas, scale, pdfUrl) {
-    await _renderToCanvas(pdfJsDoc, pageIndex, canvas, scale, pdfUrl);
+  async function renderPage(pdfJsDoc, pageIndex, canvas, scale) {
+    await _renderToCanvas(pdfJsDoc, pageIndex, canvas, scale);
   }
 
-  return { renderPage, renderAllPages, scrollToPage, rerenderAllPages, updatePageInfo, updateZoomInfo, scaleFromSlider };
+  return { registerDoc, renderPage, renderAllPages, scrollToPage, rerenderAllPages, updatePageInfo, updateZoomInfo, scaleFromSlider };
 })();
 
 if (typeof module !== 'undefined') module.exports = window.Viewer;

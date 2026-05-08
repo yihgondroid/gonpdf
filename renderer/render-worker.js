@@ -2,36 +2,49 @@
 importScripts('../node_modules/pdfjs-dist/build/pdf.js');
 pdfjsLib.GlobalWorkerOptions.workerSrc = '../node_modules/pdfjs-dist/build/pdf.worker.js';
 
-const _pdfCache = new Map();  // pdfUrl → PDFDocumentProxy
-const _cancelled = new Set(); // 취소된 reqId
+const _docCache  = new Map();  // docId → PDFDocumentProxy
+const _pending   = new Map();  // docId → [render requests] (도착 시 doc 미준비 대기열)
+const _cancelled = new Set();  // 취소된 reqId
 
 self.onmessage = function(e) {
   const msg = e.data;
-  if (msg.type === 'cancel') {
-    _cancelled.add(msg.id);
-  } else if (msg.type === 'render') {
-    _handleRender(msg);
-  }
+  if      (msg.type === 'load')   _loadDoc(msg);
+  else if (msg.type === 'render') _handleRender(msg);
+  else if (msg.type === 'cancel') _cancelled.add(msg.id);
+  else if (msg.type === 'unload') _docCache.delete(msg.docId);
 };
 
-async function _handleRender({ id, pdfUrl, pageIndex, scale, dpr }) {
+async function _loadDoc({ docId, buffer }) {
   try {
-    let doc = _pdfCache.get(pdfUrl);
-    if (!doc) {
-      doc = await pdfjsLib.getDocument({
-        url: pdfUrl,
-        cMapUrl: '../node_modules/pdfjs-dist/cmaps/',
-        cMapPacked: true,
-        standardFontDataUrl: '../node_modules/pdfjs-dist/standard_fonts/',
-        verbosity: 0,
-      }).promise;
-      _pdfCache.set(pdfUrl, doc);
-    }
+    const doc = await pdfjsLib.getDocument({
+      data: buffer,
+      cMapUrl: '../node_modules/pdfjs-dist/cmaps/',
+      cMapPacked: true,
+      standardFontDataUrl: '../node_modules/pdfjs-dist/standard_fonts/',
+      verbosity: 0,
+    }).promise;
+    _docCache.set(docId, doc);
+    const queued = _pending.get(docId) || [];
+    _pending.delete(docId);
+    queued.forEach(_handleRender);
+  } catch (err) {
+    console.error('render-worker load:', err);
+  }
+}
 
-    const page = await doc.getPage(pageIndex + 1);
+async function _handleRender(req) {
+  const { id, docId, pageIndex, scale, dpr } = req;
+  const doc = _docCache.get(docId);
+  if (!doc) {
+    if (!_pending.has(docId)) _pending.set(docId, []);
+    _pending.get(docId).push(req);
+    return;
+  }
+  try {
+    const page  = await doc.getPage(pageIndex + 1);
     const sharp = Math.max(1.5, Math.min(2, 2 / scale));
     const highVp = page.getViewport({ scale: scale * dpr * sharp });
-    const displayW = Math.round(highVp.width / dpr / sharp);
+    const displayW = Math.round(highVp.width  / dpr / sharp);
     const displayH = Math.round(highVp.height / dpr / sharp);
 
     // ── 1단계: 저화질 ──
@@ -40,8 +53,7 @@ async function _handleRender({ id, pdfUrl, pageIndex, scale, dpr }) {
     const lowCtx = lowCanvas.getContext('2d');
     lowCtx.fillStyle = '#ffffff';
     lowCtx.fillRect(0, 0, lowCanvas.width, lowCanvas.height);
-    const lowTask = page.render({ canvasContext: lowCtx, viewport: lowVp });
-    await lowTask.promise;
+    await page.render({ canvasContext: lowCtx, viewport: lowVp }).promise;
 
     if (_cancelled.has(id)) { _cancelled.delete(id); return; }
 
@@ -55,8 +67,7 @@ async function _handleRender({ id, pdfUrl, pageIndex, scale, dpr }) {
     const highCtx = highCanvas.getContext('2d');
     highCtx.fillStyle = '#ffffff';
     highCtx.fillRect(0, 0, highCanvas.width, highCanvas.height);
-    const highTask = page.render({ canvasContext: highCtx, viewport: highVp });
-    await highTask.promise;
+    await page.render({ canvasContext: highCtx, viewport: highVp }).promise;
 
     if (_cancelled.has(id)) { _cancelled.delete(id); return; }
 

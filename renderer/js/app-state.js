@@ -2,7 +2,7 @@
 
 function createTab() {
   return {
-    pdfJsDoc: null, pdfLibDoc: null, pdfUrl: null, currentPage: 0,
+    pdfJsDoc: null, pdfLibDoc: null, currentPage: 0,
     scale: 1.0, labels: {}, filename: '', undoStack: [], redoStack: [], dirty: false,
     classified: false
   };
