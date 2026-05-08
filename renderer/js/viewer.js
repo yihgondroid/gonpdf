@@ -266,11 +266,86 @@ window.Viewer = (function() {
     return value / 100;
   }
 
+  // ── 스캔 PDF 전용: 썸네일i → 뷰어i 인터리브 렌더 ──
+  async function renderAllPagesInterleaved(pdfJsDoc, wrap, scale, onCurrentPage, onThumb) {
+    if (wrap._pageScrollHandler) wrap.removeEventListener('scroll', wrap._pageScrollHandler);
+    if (wrap._renderObserver)    wrap._renderObserver.disconnect();
+    wrap._generation = (wrap._generation || 0) + 1;
+    wrap.innerHTML = '';
+    wrap._isScanned = true;
+    wrap._currentScale = scale;
+
+    var dpr   = window.devicePixelRatio || 1;
+    var sharp = 1.0;
+
+    var _initLbl = 'renderAllPages [스캔-인터리브] ' + pdfJsDoc.numPages + 'p';
+    console.time(_initLbl);
+
+    // ── 0페이지: 썸네일 → 뷰어 즉시 렌더 (observer 전에 처리) ──
+    if (onThumb) await onThumb(0);
+
+    var p0    = await pdfJsDoc.getPage(1);
+    var vp0   = p0.getViewport({ scale: scale * dpr * sharp });
+    var phH0  = Math.round(vp0.height / dpr / sharp) + 'px';
+    var phW0  = Math.round(vp0.width  / dpr / sharp) + 'px';
+    var div0  = document.createElement('div');
+    div0.className = 'pdf-page';
+    div0.dataset.pageIndex = 0;
+    div0.style.minHeight = phH0;
+    div0._rendered = true;
+    var c0 = document.createElement('canvas');
+    c0.className = 'pdf-page-canvas';
+    c0.style.width = phW0; c0.style.height = phH0; c0.style.display = 'inline-block';
+    div0.appendChild(c0);
+    wrap.appendChild(div0);
+    await _renderToCanvas(pdfJsDoc, 0, c0, scale, true);
+    console.timeEnd(_initLbl);
+
+    // observer는 0페이지 렌더 후 설정 (wrap.clientHeight 확보)
+    var observer = _makeObserver(pdfJsDoc, wrap);
+    wrap._renderObserver = observer;
+    observer.observe(div0); // _rendered=true라 스킵됨
+
+    // ── 1페이지~: 썸네일 → 뷰어 플레이스홀더 (렌더는 observer에 위임) ──
+    for (var i = 1; i < pdfJsDoc.numPages; i++) {
+      if (onThumb) await onThumb(i);
+
+      var page = await pdfJsDoc.getPage(i + 1);
+      var vp   = page.getViewport({ scale: scale * dpr * sharp });
+      var phH  = Math.round(vp.height / dpr / sharp) + 'px';
+      var phW  = Math.round(vp.width  / dpr / sharp) + 'px';
+      var pageDiv = document.createElement('div');
+      pageDiv.className = 'pdf-page';
+      pageDiv.dataset.pageIndex = i;
+      pageDiv.style.minHeight = phH;
+      var canvas = document.createElement('canvas');
+      canvas.className = 'pdf-page-canvas';
+      canvas.style.width = phW; canvas.style.height = phH; canvas.style.display = 'inline-block';
+      pageDiv.appendChild(canvas);
+      wrap.appendChild(pageDiv);
+      observer.observe(pageDiv);
+    }
+
+    // 스크롤 현재 페이지 추적
+    function onScroll() {
+      var center  = wrap.scrollTop + wrap.clientHeight / 2;
+      var pages   = wrap.querySelectorAll('.pdf-page');
+      var current = 0;
+      for (var i = 0; i < pages.length; i++) {
+        if (pages[i].offsetTop <= center) current = i;
+        else break;
+      }
+      if (onCurrentPage) onCurrentPage(current);
+    }
+    wrap.addEventListener('scroll', onScroll);
+    wrap._pageScrollHandler = onScroll;
+  }
+
   async function renderPage(pdfJsDoc, pageIndex, canvas, scale) {
     await _renderToCanvas(pdfJsDoc, pageIndex, canvas, scale);
   }
 
-  return { renderPage, renderAllPages, scrollToPage, rerenderAllPages, updatePageInfo, updateZoomInfo, scaleFromSlider };
+  return { renderPage, renderAllPages, renderAllPagesInterleaved, isScannedPDF, scrollToPage, rerenderAllPages, updatePageInfo, updateZoomInfo, scaleFromSlider };
 })();
 
 if (typeof module !== 'undefined') module.exports = window.Viewer;

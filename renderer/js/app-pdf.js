@@ -76,16 +76,42 @@ async function loadPdf(side, buffer, name, filePath) {
       }
     } catch (_) {}
 
+    const isScanned = await window.Viewer.isScannedPDF(pdfJsDoc);
+
     $('status-filename').textContent = name;
     const placeholder = $('viewer-placeholder-' + side);
     if (placeholder) placeholder.classList.add('hidden');
     e.thumbnailCount.textContent = window.PdfLoader.getPageCount(pdfJsDoc) + ' 페이지';
-    window.Thumbnail.renderThumbnails(pdfJsDoc, e.thumbnailList, tab.labels,
-      (pi) => selectPage(side, pi),
-      (oi, ni) => handleReorder(side, oi, ni),
-      (pi, label) => { tab.labels[pi] = label; },
-      handleCrossReorder);
-    await setupContinuousViewer(side);
+
+    if (isScanned) {
+      window.Thumbnail.initContainer(
+        e.thumbnailList,
+        (oi, ni) => handleReorder(side, oi, ni),
+        handleCrossReorder
+      );
+      await window.Viewer.renderAllPagesInterleaved(
+        pdfJsDoc, e.viewerCanvasWrap, tab.scale,
+        function(pi) {
+          tab.currentPage = pi;
+          window.Viewer.updatePageInfo(e.pageInfo, pi, window.PdfLoader.getPageCount(pdfJsDoc));
+        },
+        function(i) {
+          return window.Thumbnail.addOneThumbnail(
+            pdfJsDoc, e.thumbnailList, i,
+            tab.labels[i],
+            (pi) => selectPage(side, pi),
+            (pi, label) => { tab.labels[pi] = label; }
+          );
+        }
+      );
+    } else {
+      window.Thumbnail.renderThumbnails(pdfJsDoc, e.thumbnailList, tab.labels,
+        (pi) => selectPage(side, pi),
+        (oi, ni) => handleReorder(side, oi, ni),
+        (pi, label) => { tab.labels[pi] = label; },
+        handleCrossReorder);
+      await setupContinuousViewer(side);
+    }
     selectPage(side, 0);
     enableButtons(true, false);
     renderTabBar(side);

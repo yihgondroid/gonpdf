@@ -79,18 +79,11 @@ function initDragSelect(container) {
   });
 }
 
-function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder, onLabelChange, onCrossReorder) {
-  if (!labels) labels = {};
+function initContainer(container, onReorder, onCrossReorder) {
   _selectedSets.set(container, new Set());
   _anchors.set(container, 0);
   container.innerHTML = '';
   initDragSelect(container);
-
-  for (let i = 0; i < pdfJsDoc.numPages; i++) {
-    const item = createThumbnailItem(i, pdfJsDoc, labels[i] || 'unknown', container, onSelect, onLabelChange);
-    container.appendChild(item);
-  }
-
   window.Sortable.create(container, {
     group: 'pdf-pages',
     animation: 150,
@@ -101,13 +94,8 @@ function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder, onLa
       });
     },
     onEnd: function(evt) {
-      evt.from.querySelectorAll('.thumbnail-item').forEach(function(el) {
-        el.classList.remove('dragging-selected');
-      });
-      evt.to.querySelectorAll('.thumbnail-item').forEach(function(el) {
-        el.classList.remove('dragging-selected');
-      });
-
+      evt.from.querySelectorAll('.thumbnail-item').forEach(function(el) { el.classList.remove('dragging-selected'); });
+      evt.to.querySelectorAll('.thumbnail-item').forEach(function(el) { el.classList.remove('dragging-selected'); });
       if (evt.from === evt.to) {
         if (evt.oldIndex !== evt.newIndex) onReorder(evt.oldIndex, evt.newIndex);
       } else if (onCrossReorder) {
@@ -119,14 +107,25 @@ function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder, onLa
   });
 }
 
+function renderThumbnails(pdfJsDoc, container, labels, onSelect, onReorder, onLabelChange, onCrossReorder) {
+  if (!labels) labels = {};
+  initContainer(container, onReorder, onCrossReorder);
+  for (let i = 0; i < pdfJsDoc.numPages; i++) {
+    const item = createThumbnailItem(i, pdfJsDoc, labels[i] || 'unknown', container, onSelect, onLabelChange);
+    container.appendChild(item);
+  }
+}
+
 const LABEL_CYCLE = ['unknown', 'question', 'answer', 'other'];
 
-function createThumbnailItem(pageIndex, pdfJsDoc, label, container, onSelect, onLabelChange) {
+function createThumbnailItem(pageIndex, pdfJsDoc, label, container, onSelect, onLabelChange, autoRender) {
+  if (autoRender === undefined) autoRender = true;
   const item = document.createElement('div');
   item.className = 'thumbnail-item';
   item.dataset.pageIndex = pageIndex;
 
   const canvas = document.createElement('canvas');
+  item._thumbCanvas = canvas;
   item.appendChild(canvas);
 
   const badge = createBadge(label, pageIndex);
@@ -170,8 +169,14 @@ function createThumbnailItem(pageIndex, pdfJsDoc, label, container, onSelect, on
       onSelect(pageIndex);
     }
   });
-  renderThumbCanvas(pdfJsDoc, pageIndex, canvas);
+  if (autoRender) renderThumbCanvas(pdfJsDoc, pageIndex, canvas);
   return item;
+}
+
+async function addOneThumbnail(pdfJsDoc, container, pageIndex, label, onSelect, onLabelChange) {
+  const item = createThumbnailItem(pageIndex, pdfJsDoc, label || 'unknown', container, onSelect, onLabelChange, false);
+  container.appendChild(item);
+  await renderThumbCanvas(pdfJsDoc, pageIndex, item._thumbCanvas);
 }
 
 async function renderThumbCanvas(pdfJsDoc, pageIndex, canvas) {
@@ -243,5 +248,5 @@ function updateAllBadges(container, labels) {
   });
 }
 
-window.Thumbnail = { renderThumbnails, setSelected, clearSelection, updateAllBadges, getSelectedIndices };
-if (typeof module !== 'undefined') module.exports = { renderThumbnails, setSelected, clearSelection, updateAllBadges, getSelectedIndices };
+window.Thumbnail = { renderThumbnails, initContainer, addOneThumbnail, setSelected, clearSelection, updateAllBadges, getSelectedIndices };
+if (typeof module !== 'undefined') module.exports = { renderThumbnails, initContainer, addOneThumbnail, setSelected, clearSelection, updateAllBadges, getSelectedIndices };
