@@ -20,7 +20,7 @@ window.Viewer = (function() {
   }
 
   // ── 페이지 렌더링 (저화질 → 고화질 점진) ──
-  async function _renderToCanvas(pdfJsDoc, pageIndex, canvas, scale) {
+  async function _renderToCanvas(pdfJsDoc, pageIndex, canvas, scale, isScanned) {
     // 기존 렌더 취소
     if (canvas._renderTask) {
       canvas._renderTask.cancel();
@@ -31,7 +31,7 @@ window.Viewer = (function() {
     const cached = _cacheGet(pdfJsDoc, pageIndex, scale);
     if (cached) {
       const dpr   = window.devicePixelRatio || 1;
-      const sharp = Math.max(1.5, Math.min(2, 2 / scale));
+      const sharp = isScanned ? 1.0 : Math.max(1.5, Math.min(2, 2 / scale));
       canvas.width  = cached.width;
       canvas.height = cached.height;
       canvas.style.width   = (cached.width  / dpr / sharp) + 'px';
@@ -44,7 +44,7 @@ window.Viewer = (function() {
 
     const page  = await pdfJsDoc.getPage(pageIndex + 1);
     const dpr   = window.devicePixelRatio || 1;
-    const sharp = Math.max(1.5, Math.min(2, 2 / scale));
+    const sharp = isScanned ? 1.0 : Math.max(1.5, Math.min(2, 2 / scale));
     const fullVp  = page.getViewport({ scale: scale * dpr * sharp });
     const displayW = (fullVp.width  / dpr / sharp) + 'px';
     const displayH = (fullVp.height / dpr / sharp) + 'px';
@@ -55,9 +55,14 @@ window.Viewer = (function() {
     lowBuf.height = Math.round(lowVp.height);
     lowBuf.getContext('2d').fillStyle = '#ffffff';
     lowBuf.getContext('2d').fillRect(0, 0, lowBuf.width, lowBuf.height);
+    const _type    = isScanned ? '스캔' : '일반';
+    const _lowLbl  = 'p' + pageIndex + ' low  [' + _type + ']';
+    const _highLbl = 'p' + pageIndex + ' high [' + _type + ']';
+
     const lowTask = page.render({ canvasContext: lowBuf.getContext('2d'), viewport: lowVp });
     canvas._renderTask = lowTask;
 
+    console.time(_lowLbl);
     try {
       await lowTask.promise;
       canvas.width  = lowBuf.width;
@@ -68,10 +73,12 @@ window.Viewer = (function() {
       canvas.getContext('2d').drawImage(lowBuf, 0, 0);
       if (canvas.parentElement) canvas.parentElement.style.minHeight = displayH;
     } catch (e) {
+      console.timeEnd(_lowLbl);
       if (e && e.name !== 'RenderingCancelledException') console.error('render-low:', e);
       canvas._renderTask = null;
       return;
     }
+    console.timeEnd(_lowLbl);
 
     const highBuf = document.createElement('canvas');
     highBuf.width  = Math.round(fullVp.width);
@@ -81,6 +88,7 @@ window.Viewer = (function() {
     const highTask = page.render({ canvasContext: highBuf.getContext('2d'), viewport: fullVp });
     canvas._renderTask = highTask;
 
+    console.time(_highLbl);
     try {
       await highTask.promise;
       canvas.width  = highBuf.width;
@@ -90,8 +98,10 @@ window.Viewer = (function() {
       canvas.getContext('2d').drawImage(highBuf, 0, 0);
       createImageBitmap(highBuf).then(function(bmp) { _cacheSet(pdfJsDoc, pageIndex, scale, bmp); });
     } catch (e) {
+      console.timeEnd(_highLbl);
       if (e && e.name !== 'RenderingCancelledException') console.error('render-high:', e);
     }
+    console.timeEnd(_highLbl);
 
     canvas._renderTask = null;
   }
@@ -105,10 +115,23 @@ window.Viewer = (function() {
           entry.target._rendered = true;
           var c   = entry.target.querySelector('.pdf-page-canvas');
           var idx = Number(entry.target.dataset.pageIndex);
-          _renderToCanvas(pdfJsDoc, idx, c, wrap._currentScale);
+          _renderToCanvas(pdfJsDoc, idx, c, wrap._currentScale, wrap._isScanned);
         }
       });
     }, { root: wrap, rootMargin: margin + ' 0px' });
+  }
+
+  // ── 스캔 PDF 감지 (첫 3페이지에 텍스트 없으면 스캔으로 판단) ──
+  async function isScannedPDF(pdfJsDoc) {
+    var sampleCount = Math.min(3, pdfJsDoc.numPages);
+    for (var i = 0; i < sampleCount; i++) {
+      var page    = await pdfJsDoc.getPage(i + 1);
+      var content = await page.getTextContent();
+      if (content.items.some(function(item) { return item.str && item.str.trim().length > 0; })) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // ── 전체 페이지 초기 렌더 ──
@@ -119,15 +142,25 @@ window.Viewer = (function() {
 
     wrap.innerHTML = '';
 
-    // 플레이스홀더 크기 계산
-    const firstPage = await pdfJsDoc.getPage(1);
-    const dpr       = window.devicePixelRatio || 1;
-    const sharp     = Math.max(1.5, Math.min(2, 2 / scale));
-    const fvp       = firstPage.getViewport({ scale: scale * dpr * sharp });
-    const phH = Math.round(fvp.height / dpr / sharp) + 'px';
-    const phW = Math.round(fvp.width  / dpr / sharp) + 'px';
+    // 스캔 PDF 감지 및 sharp 결정
+    var isScanned = await isScannedPDF(pdfJsDoc);
+    wrap._isScanned = isScanned;
+    var dpr   = window.devicePixelRatio || 1;
+    var sharp = isScanned ? 1.0 : Math.max(1.5, Math.min(2, 2 / scale));
+
+    var _initLbl = 'renderAllPages [' + (isScanned ? '스캔' : '일반') + '] ' + pdfJsDoc.numPages + 'p';
+    console.time(_initLbl);
+
+    // 각 페이지별 플레이스홀더 크기 계산
+    var allPages = await Promise.all(
+      Array.from({ length: pdfJsDoc.numPages }, function(_, i) { return pdfJsDoc.getPage(i + 1); })
+    );
 
     for (var i = 0; i < pdfJsDoc.numPages; i++) {
+      var vp  = allPages[i].getViewport({ scale: scale * dpr * sharp });
+      var phH = Math.round(vp.height / dpr / sharp) + 'px';
+      var phW = Math.round(vp.width  / dpr / sharp) + 'px';
+
       var pageDiv = document.createElement('div');
       pageDiv.className = 'pdf-page';
       pageDiv.dataset.pageIndex = i;
@@ -147,8 +180,9 @@ window.Viewer = (function() {
     var firstDiv = wrap.querySelector('[data-page-index="0"]');
     if (firstDiv) {
       firstDiv._rendered = true;
-      await _renderToCanvas(pdfJsDoc, 0, firstDiv.querySelector('.pdf-page-canvas'), scale);
+      await _renderToCanvas(pdfJsDoc, 0, firstDiv.querySelector('.pdf-page-canvas'), scale, isScanned);
     }
+    console.timeEnd(_initLbl);
 
     // IntersectionObserver: 보이는 페이지만 렌더링
     var observer = _makeObserver(pdfJsDoc, wrap);
@@ -207,7 +241,7 @@ window.Viewer = (function() {
       if (bottom >= scrollTop - 400 && top <= scrollBottom + 400) {
         pageDiv._rendered = true;
         _renderToCanvas(pdfJsDoc, Number(pageDiv.dataset.pageIndex),
-          pageDiv.querySelector('.pdf-page-canvas'), scale);
+          pageDiv.querySelector('.pdf-page-canvas'), scale, wrap._isScanned);
       }
     });
 
