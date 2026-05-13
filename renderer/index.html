@@ -35,6 +35,10 @@
     <div class="toolbar-group">
       <button id="btn-fullscreen">⛶ 전체화면</button>
     </div>
+    <div class="toolbar-sep"></div>
+    <div class="toolbar-group">
+      <button id="btn-spellcheck">🔤 맞춤법</button>
+    </div>
   </div>
 
   <div id="tab-bar-container">
@@ -166,6 +170,23 @@
     <div class="ctx-item" id="ctx-save-keep">보존 후 저장</div>
   </div>
 
+  <!-- 맞춤법 검사 패널 -->
+  <div id="spell-panel">
+    <div id="spell-header">
+      <span>맞춤법 검사</span>
+      <button id="spell-close">✕</button>
+    </div>
+    <div id="spell-scope-row">
+      <button class="spell-scope-btn active" data-scope="page">현재 페이지</button>
+      <button class="spell-scope-btn" data-scope="all">전체 문서</button>
+    </div>
+    <button id="spell-run">검사 시작</button>
+    <div class="spell-divider">HWP / HWPX</div>
+    <button id="spell-hwp">📄 HWP 파일 열어서 검사</button>
+    <div id="spell-status"></div>
+    <div id="spell-list"></div>
+  </div>
+
   <div id="fullscreen-toast">ESC 키를 누르면 돌아갑니다</div>
   <div id="save-toast"></div>
 
@@ -192,5 +213,6 @@
   <script src="js/app-auto.js"></script>
   <script src="js/app-ui.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/spellcheck.js"></script>
 </body>
 </html>

@@ -779,3 +779,166 @@ body.fullscreen-mode #panel-resizer-right { display: none !important; }
 
 /* 사이드바 선택된 썸네일 */
 .thumb.selected { border-color: var(--accent); }
+
+/* ── 맞춤법 검사 ── */
+#btn-spellcheck { background: var(--accent-soft); color: var(--accent); }
+
+#spell-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 260px;
+  background: var(--bg-surface);
+  border-left: 1.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 500;
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
+}
+#spell-panel.open { transform: translateX(0); }
+
+#spell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1.5px solid var(--border);
+  font-weight: 600;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+#spell-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--text-secondary);
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+}
+#spell-close:hover { background: var(--bg-hover); }
+
+#spell-scope-row {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1.5px solid var(--border);
+  flex-shrink: 0;
+}
+.spell-scope-btn {
+  flex: 1;
+  padding: 5px 4px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-canvas);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: 'Malgun Gothic', sans-serif;
+  transition: background 0.1s;
+}
+.spell-scope-btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+#spell-run {
+  margin: 8px 12px;
+  padding: 7px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Malgun Gothic', sans-serif;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+#spell-run:hover { background: var(--accent-hover); }
+#spell-run:disabled { background: var(--text-muted); cursor: default; }
+
+.spell-divider {
+  margin: 4px 12px 0;
+  padding: 5px 0 4px;
+  border-top: 1.5px solid var(--border);
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+#spell-hwp {
+  margin: 0 12px 8px;
+  padding: 6px;
+  background: var(--bg-canvas);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'Malgun Gothic', sans-serif;
+  flex-shrink: 0;
+  transition: background 0.1s;
+  text-align: left;
+}
+#spell-hwp:hover { background: var(--bg-hover); }
+#spell-hwp:disabled { color: var(--text-muted); cursor: default; }
+
+#spell-status {
+  padding: 4px 12px 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  min-height: 22px;
+  border-bottom: 1.5px solid var(--border);
+}
+
+#spell-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.spell-item {
+  padding: 7px 12px 7px 10px;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--danger);
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1.5;
+}
+.spell-item:hover { background: var(--bg-hover); }
+.spell-item.warn { border-left-color: #eab308; }
+
+.spell-pg  { font-size: 10px; color: var(--text-muted); min-width: 24px; }
+.spell-wd  { color: var(--danger); font-weight: 600; }
+.spell-item.warn .spell-wd { color: #ca8a04; }
+.spell-ar  { color: var(--text-muted); font-size: 11px; }
+.spell-sg  { color: var(--accent); }
+.spell-msg { color: #ca8a04; font-size: 11px; }
+
+/* 오버레이 */
+.pdf-page { position: relative; }
+.spell-error-layer {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+.spell-mark {
+  position: absolute;
+  height: 2px;
+  border-radius: 1px;
+}

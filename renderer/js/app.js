@@ -7,6 +7,7 @@ window.electronAPI.onMenuRedo(redo);
 
 $('btn-open').addEventListener('click', openFile);
 $('btn-save').addEventListener('click', saveActive);
+$('btn-spellcheck').addEventListener('click', function () { window.SpellCheck.openPanel(); });
 
 $('btn-delete').addEventListener('click', async function() {
   const st = activeState();
