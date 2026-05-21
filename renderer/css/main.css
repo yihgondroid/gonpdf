@@ -1,32 +1,32 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+﻿* { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  /* 배경 */
+  /* 諛곌꼍 */
   --bg-app:      #FAFAFA;
   --bg-surface:  #FFFFFF;
   --bg-canvas:   #F4F4F5;
   --bg-hover:    #F4F4F5;
 
-  /* 텍스트 */
+  /* ?띿뒪??*/
   --text-primary:   #18181B;
   --text-secondary: #71717A;
   --text-muted:     #D4D4D8;
 
-  /* 테두리 */
+  /* ?뚮몢由?*/
   --border:       #E4E4E7;
   --border-focus: #D4D4D8;
 
-  /* 포인트 */
+  /* ?ъ씤??*/
   --accent:       #5B5BD6;
   --accent-hover: #4A4AC4;
   --accent-soft:  #EEEEFF;
 
-  /* 위험 */
+  /* ?꾪뿕 */
   --danger:       #DC2626;
   --danger-bg:    #FEF2F2;
   --danger-border:#FEE2E2;
 
-  /* 반경 */
+  /* 諛섍꼍 */
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
@@ -74,7 +74,7 @@ body {
 #btn-auto-left, #btn-auto-right,
 #btn-auto-answer { background: var(--accent-soft); color: var(--accent); }
 
-/* ── 탭 바 ── */
+/* ?? ??諛??? */
 #tab-bar-container {
   display: none;
   background: var(--bg-canvas);
@@ -287,7 +287,7 @@ body.fullscreen-mode #tab-bar-container { display: none !important; }
 
 .hidden { display: none !important; }
 
-/* 뷰어 비어있을 때 안내 문구 */
+/* 酉곗뼱 鍮꾩뼱?덉쓣 ???덈궡 臾멸뎄 */
 .viewer-placeholder {
   position: absolute;
   top: 50%;
@@ -307,7 +307,7 @@ body.fullscreen-mode #tab-bar-container { display: none !important; }
 .sortable-ghost { opacity: .3; }
 .sortable-drag  { opacity: .9; }
 
-/* 연속 스크롤 페이지 */
+/* ?곗냽 ?ㅽ겕濡??섏씠吏 */
 .pdf-page { margin-bottom: 12px; text-align: center; }
 .pdf-page-canvas {
   display: inline-block;
@@ -320,7 +320,7 @@ body.fullscreen-mode #tab-bar-container { display: none !important; }
 
 #main-area.split-mode #viewer-canvas-wrap-left .pdf-page-canvas { transform: scaleX(-1); }
 
-/* ── 양면분할 ── */
+/* ?? ?묐㈃遺꾪븷 ?? */
 #viewer-panel-right,
 #panel-resizer-right,
 #thumbnail-panel-right { display: none; }
@@ -419,11 +419,11 @@ body.fullscreen-mode #tab-bar-container { display: none !important; }
   background: #ffffff;
 }
 
-/* 포커스 표시 */
+/* ?ъ빱???쒖떆 */
 #viewer-panel-left.active { border-top: 2px solid var(--accent); }
 #viewer-panel-right.active { border-top: 2px solid var(--accent); }
 
-/* 양면분할 — 왼쪽 뷰어 스크롤바를 왼쪽 끝으로 */
+/* ?묐㈃遺꾪븷 ???쇱そ 酉곗뼱 ?ㅽ겕濡ㅻ컮瑜??쇱そ ?앹쑝濡?*/
 #main-area.split-mode #viewer-canvas-wrap-left {
   transform: scaleX(-1);
 }
@@ -431,13 +431,13 @@ body.fullscreen-mode #tab-bar-container { display: none !important; }
   transform: scaleX(-1);
 }
 
-/* 양면분할 — 가운데 구분선 */
+/* ?묐㈃遺꾪븷 ??媛?대뜲 援щ텇??*/
 #main-area.split-mode #viewer-panel-left {
   border-right: 8px solid var(--accent);
   box-shadow: 3px 0 10px rgba(91, 91, 214, 0.15);
 }
 
-/* 드래그앤드롭 드롭 존 */
+/* ?쒕옒洹몄븻?쒕∼ ?쒕∼ 議?*/
 #viewer-panel-left.drop-target,
 #viewer-panel-right.drop-target {
   outline: 3px dashed var(--accent);
@@ -445,15 +445,15 @@ body.fullscreen-mode #tab-bar-container { display: none !important; }
   background: rgba(91, 91, 214, 0.05);
 }
 
-/* 양면분할 버튼 */
+/* ?묐㈃遺꾪븷 踰꾪듉 */
 #btn-split-view { background: var(--bg-canvas); }
 #btn-split-view.active { background: var(--accent); color: #fff; font-weight: bold; }
 
-/* 전체화면 버튼 */
+/* ?꾩껜?붾㈃ 踰꾪듉 */
 #btn-fullscreen { background: var(--bg-canvas); }
 #btn-fullscreen.active { background: var(--accent); color: #fff; font-weight: bold; }
 
-/* 전체화면 모드 — 툴바·썸네일·리사이저 숨김 */
+/* ?꾩껜?붾㈃ 紐⑤뱶 ???대컮쨌?몃꽕?셋룸━?ъ씠? ?④? */
 body.fullscreen-mode #toolbar,
 body.fullscreen-mode #statusbar,
 body.fullscreen-mode #thumbnail-panel-left,
@@ -461,7 +461,7 @@ body.fullscreen-mode #thumbnail-panel-right,
 body.fullscreen-mode #panel-resizer-left,
 body.fullscreen-mode #panel-resizer-right { display: none !important; }
 
-/* 전체화면 진입 토스트 */
+/* ?꾩껜?붾㈃ 吏꾩엯 ?좎뒪??*/
 #fullscreen-toast {
   position: fixed;
   top: 50%;
@@ -504,7 +504,7 @@ body.fullscreen-mode #panel-resizer-right { display: none !important; }
   transform: translate(-50%, -50%);
 }
 
-/* 확인 다이얼로그 */
+/* ?뺤씤 ?ㅼ씠?쇰줈洹?*/
 #confirm-overlay {
   display: none;
   position: fixed;
@@ -587,7 +587,7 @@ body.fullscreen-mode #panel-resizer-right { display: none !important; }
   font-family: 'Malgun Gothic', monospace;
 }
 
-/* 컨텍스트 메뉴 */
+/* 而⑦뀓?ㅽ듃 硫붾돱 */
 #context-menu {
   display: none;
   position: fixed;
@@ -620,7 +620,7 @@ body.fullscreen-mode #panel-resizer-right { display: none !important; }
   outline: 2px dashed var(--accent);
 }
 
-/* PDF 병합 모달 */
+/* PDF 蹂묓빀 紐⑤떖 */
 #merge-overlay {
   display: none;
   position: fixed;
@@ -754,9 +754,9 @@ body.fullscreen-mode #panel-resizer-right { display: none !important; }
 #merge-table thead th .sort-arrow { margin-left: 4px; font-size: 10px; color: var(--text-muted); }
 #merge-table-wrap.drag-over { background: var(--accent-soft); outline: 2px dashed var(--accent); outline-offset: -3px; }
 
-/* ── 공통 유틸리티 ── */
+/* ?? 怨듯넻 ?좏떥由ы떚 ?? */
 
-/* 툴바 버튼 */
+/* ?대컮 踰꾪듉 */
 .tb-btn {
   background: transparent;
   border: 0.5px solid var(--border);
@@ -766,7 +766,7 @@ body.fullscreen-mode #panel-resizer-right { display: none !important; }
 .tb-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 .tb-btn.active { background: var(--bg-hover); border-color: var(--border-focus); color: var(--text-primary); }
 
-/* 강조 버튼 */
+/* 媛뺤“ 踰꾪듉 */
 .btn-accent {
   background: var(--accent);
   color: #fff;
@@ -774,171 +774,9 @@ body.fullscreen-mode #panel-resizer-right { display: none !important; }
   border-radius: var(--radius-sm);
 }
 
-/* 패널 구분선 */
+/* ?⑤꼸 援щ텇??*/
 .divider { width: 0.5px; background: var(--border); }
 
-/* 사이드바 선택된 썸네일 */
+/* ?ъ씠?쒕컮 ?좏깮???몃꽕??*/
 .thumb.selected { border-color: var(--accent); }
 
-/* ── 맞춤법 검사 ── */
-#btn-spellcheck { background: var(--accent-soft); color: var(--accent); }
-
-#spell-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 260px;
-  background: var(--bg-surface);
-  border-left: 1.5px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  z-index: 500;
-  transform: translateX(100%);
-  transition: transform 0.2s ease;
-  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
-}
-#spell-panel.open { transform: translateX(0); }
-
-#spell-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-bottom: 1.5px solid var(--border);
-  font-weight: 600;
-  font-size: 13px;
-  flex-shrink: 0;
-}
-#spell-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 15px;
-  color: var(--text-secondary);
-  padding: 2px 5px;
-  border-radius: var(--radius-sm);
-  line-height: 1;
-}
-#spell-close:hover { background: var(--bg-hover); }
-
-#spell-scope-row {
-  display: flex;
-  gap: 6px;
-  padding: 8px 12px;
-  border-bottom: 1.5px solid var(--border);
-  flex-shrink: 0;
-}
-.spell-scope-btn {
-  flex: 1;
-  padding: 5px 4px;
-  border: 1.5px solid var(--border);
-  background: var(--bg-canvas);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 11px;
-  font-family: 'Malgun Gothic', sans-serif;
-  transition: background 0.1s;
-}
-.spell-scope-btn.active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 500;
-}
-
-#spell-run {
-  margin: 8px 12px;
-  padding: 7px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  font-family: 'Malgun Gothic', sans-serif;
-  flex-shrink: 0;
-  transition: background 0.1s;
-}
-#spell-run:hover { background: var(--accent-hover); }
-#spell-run:disabled { background: var(--text-muted); cursor: default; }
-
-.spell-divider {
-  margin: 4px 12px 0;
-  padding: 5px 0 4px;
-  border-top: 1.5px solid var(--border);
-  font-size: 10px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  flex-shrink: 0;
-}
-
-#spell-hwp {
-  margin: 0 12px 8px;
-  padding: 6px;
-  background: var(--bg-canvas);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 12px;
-  font-family: 'Malgun Gothic', sans-serif;
-  flex-shrink: 0;
-  transition: background 0.1s;
-  text-align: left;
-}
-#spell-hwp:hover { background: var(--bg-hover); }
-#spell-hwp:disabled { color: var(--text-muted); cursor: default; }
-
-#spell-status {
-  padding: 4px 12px 8px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-  min-height: 22px;
-  border-bottom: 1.5px solid var(--border);
-}
-
-#spell-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 0;
-}
-
-.spell-item {
-  padding: 7px 12px 7px 10px;
-  border-bottom: 1px solid var(--border);
-  border-left: 3px solid var(--danger);
-  cursor: pointer;
-  font-size: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 3px;
-  line-height: 1.5;
-}
-.spell-item:hover { background: var(--bg-hover); }
-.spell-item.warn { border-left-color: #eab308; }
-
-.spell-pg  { font-size: 10px; color: var(--text-muted); min-width: 24px; }
-.spell-wd  { color: var(--danger); font-weight: 600; }
-.spell-item.warn .spell-wd { color: #ca8a04; }
-.spell-ar  { color: var(--text-muted); font-size: 11px; }
-.spell-sg  { color: var(--accent); }
-.spell-msg { color: #ca8a04; font-size: 11px; }
-
-/* 오버레이 */
-.pdf-page { position: relative; }
-.spell-error-layer {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  overflow: hidden;
-}
-.spell-mark {
-  position: absolute;
-  height: 2px;
-  border-radius: 1px;
-}

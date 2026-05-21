@@ -375,35 +375,6 @@ function checkForUpdates(win) {
   autoUpdater.checkForUpdates().catch(() => {});
 }
 
-ipcMain.handle('hwp:openAndExtract', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog(mainWin, {
-    title: 'HWP/HWPX 파일 열기',
-    filters: [{ name: 'HWP/HWPX 파일', extensions: ['hwp', 'hwpx'] }],
-    properties: ['openFile'],
-    ...(lastDirectory ? { defaultPath: lastDirectory } : {}),
-  });
-  if (canceled || filePaths.length === 0) return null;
-  lastDirectory = path.dirname(filePaths[0]);
-
-  const { parse } = require('kordoc');
-  const buf = fs.readFileSync(filePaths[0]);
-  const result = await parse(buf.buffer);
-  if (!result.success) throw new Error('HWP 파일 파싱 실패');
-
-  return { filename: path.basename(filePaths[0]), markdown: result.markdown };
-});
-
-ipcMain.handle('spell:check', async (_event, text) => {
-  const res = await fetch('https://speller.cs.pusan.ac.kr/results', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'text1=' + encodeURIComponent(text),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) throw new Error('맞춤법 검사 서버 오류: ' + res.status);
-  return await res.json();
-});
-
 ipcMain.handle('dialog:openFolder', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWin, {
     title: '폴더 선택',

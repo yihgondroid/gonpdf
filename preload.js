@@ -17,6 +17,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
   confirmClose: (filename) => ipcRenderer.invoke('dialog:confirmClose', filename),
   closeApp: () => ipcRenderer.send('app:close'),
   onWillClose: (cb) => ipcRenderer.on('app:will-close', cb),
-  checkSpelling: (text) => ipcRenderer.invoke('spell:check', text),
-  openHwpAndExtract: () => ipcRenderer.invoke('hwp:openAndExtract'),
 });
